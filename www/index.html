@@ -518,16 +518,21 @@ main{
   border-top:1px solid #eee;padding-top:8px;
 }
 
-/* Photo gallery — max 3 thumbnails per row, compact, aligned, flows with the
-   page instead of forcing an A4-shaped page break. */
+/* Photo gallery — max 3 thumbnails per row, compact, centered (balanced margins
+   even when there are fewer than 3 photos), flows with the page instead of
+   forcing an A4-shaped page break. */
 .report-doc .rgallery{
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
   gap:8px;
-  margin-top:6px;
+  margin:6px auto 0;
 }
 .report-doc .rgallery .rgallery-cell{
   border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
+  width:calc(33.333% - 6px);
+  max-width:220px;
+  flex:0 0 auto;
 }
 .report-doc .rgallery .rgallery-cell img{
   width:100%;height:110px;object-fit:cover;display:block;
@@ -1358,8 +1363,7 @@ var PARAM_SETS = {
     "Format brique",
     "État du carton",
     "Poids brut (g)",
-    "Suivi pesée opérateur",
-    TYPE_BOUTEILLE_PARAM
+    "Suivi pesée opérateur"
   ],
   "Bouteille": [
     "Date (bouteille / carton)",
@@ -2023,7 +2027,7 @@ function renderNcBlocks(){
     var d = state.ncData[p];
     var block = document.createElement("div");
     block.className = "card nc-block";
-    var photosHtml = (d.photos||[]).map(function(src){ return '<img src="'+src+'">'; }).join("");
+    var photosHtml = (d.photos||[]).map(function(p){ return '<img src="'+p.src+'">'; }).join("");
     var clotureRow = d.ncTraitee === "Oui"
       ? '<input type="text" class="nc-cloture" data-p="'+escapeHtml(p)+'" value="'+escapeHtml(d.clotureDetails||"")+'" placeholder="Précisions : date / par qui ?" style="margin-top:8px;">'
       : '';
@@ -2114,7 +2118,7 @@ function renderNcBlocks(){
   $all(".nc-photo-camera,.nc-photo-gallery").forEach(function(el){
     el.addEventListener("change", function(){
       var p = el.dataset.p;
-      handlePhotoFilesInput(el, {push:function(item){ state.ncData[p].photos.push(item.src); }}, renderNcBlocks);
+      handlePhotoFilesInput(el, {push:function(item){ state.ncData[p].photos.push(item); }}, renderNcBlocks);
     });
   });
 }
@@ -2413,10 +2417,16 @@ function showView(name){
 function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
   var cells = photos.map(function(p){
-    return '<div class="rgallery-cell"><img src="'+p.src+'">'+
-      (p.caption ? '<div class="rgallery-cap">'+escapeHtml(p.caption)+'</div>' : '')+
+    // Tolère les deux formats : objet {src,caption} (format actuel) ou chaîne brute
+    // (anciens contrôles enregistrés avant la correction de la liaison des photos NC).
+    var src = (typeof p === "string") ? p : p.src;
+    var caption = (typeof p === "string") ? "" : (p.caption || "");
+    if(!src) return "";
+    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:110px;object-fit:cover;display:block;">'+
+      (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
       '</div>';
   }).join("");
+  if(!cells) return "";
   return '<div class="rgallery">'+cells+'</div>';
 }
 
@@ -2610,6 +2620,25 @@ function buildSynthesisHtml(){
   });
   var alertesHtml = alertesLines.length ? alertesLines.join("") : '<div class="ralert rempty">Aucune alerte</div>';
 
+  // Toutes les photos du quart (preuves terrain + preuves NC de chaque contrôle),
+  // avec légende — corrige le bug où seul un nombre apparaissait sans les images.
+  var allShiftPhotos = [];
+  controls.forEach(function(c){
+    (c.photos||[]).forEach(function(p){
+      var src = (typeof p === "string") ? p : p.src;
+      if(src) allShiftPhotos.push({src:src, caption:c.heure+" · "+c.ligne});
+    });
+    Object.keys(c.nc).forEach(function(k){
+      (c.nc[k].photos||[]).forEach(function(p){
+        var src = (typeof p === "string") ? p : p.src;
+        if(src) allShiftPhotos.push({src:src, caption:"NC "+k+" · "+c.heure});
+      });
+    });
+  });
+  var shiftPhotosHtml = allShiftPhotos.length
+    ? '<h3 class="rsection">📷 Photos du quart (preuves terrain et NC)</h3>'+renderPhotoGallery(allShiftPhotos)
+    : "";
+
   var synthPhotosHtml = (state.synthPhotos && state.synthPhotos.length)
     ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGallery(state.synthPhotos)
     : "";
@@ -2638,10 +2667,13 @@ function buildSynthesisHtml(){
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
       '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
-      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>NC</th><th>Photos</th></tr>'+tableRows+'</table>'+
+      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th>'+
+        '<th style="font-size:.58rem;padding-left:8px;padding-right:8px;">NC</th>'+
+        '<th style="font-size:.58rem;padding-left:8px;padding-right:8px;">Photos</th></tr>'+tableRows+'</table>'+
       '<h3 class="rsection">🚨 Non-conformités du quart</h3>'+ncDetailHtml+
       '<div class="rfooter-block">'+
         '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
+        shiftPhotosHtml+
         synthPhotosHtml+
         '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
       '</div>'+
