@@ -402,133 +402,135 @@ main{
 }
 .stat-box .num{font-size:1.4rem;font-weight:800;color:var(--gold);}
 .stat-box .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:#dcd6c2;margin-top:2px;}
-/* Report styling (exported) */
+/* Report styling (exported) — redesign: dense one-page layout, 3-block structure
+   (header grid / results table / footer validation), colour badges instead of
+   repeated emoji, tables sized so nothing is ever truncated. */
 .report-doc{
   background:#fff;
-  padding:26px 24px;
-  font-family:Georgia,'Times New Roman',serif;
+  padding:20px 22px;
+  font-family:-apple-system,Arial,sans-serif;
   color:#1a1a1a;
   border:1px solid #ddd;
 }
 .report-doc .rtitle{
   text-align:left;
   font-weight:800;
-  font-size:1.25rem;
-  letter-spacing:.03em;
+  font-size:1.1rem;
+  letter-spacing:.02em;
   color:var(--dark);
-  margin-bottom:4px;
-  font-family:-apple-system,Arial,sans-serif;
+  margin-bottom:2px;
 }
 .report-doc .rcaption{
   text-align:left;
-  font-size:.8rem;
+  font-size:.72rem;
   font-weight:600;
-  color:var(--dark2);
-  font-family:-apple-system,Arial,sans-serif;
+  color:#777;
 }
 .report-doc .rheader{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:12px;
   border-bottom:3px solid var(--gold);
-  padding-bottom:12px;
-  margin-bottom:14px;
+  padding-bottom:10px;
+  margin-bottom:12px;
 }
 .report-doc .rheader > div{flex:1;}
 .report-doc .rlogo{
-  height:56px;width:56px;object-fit:contain;flex-shrink:0;
+  height:44px;width:44px;object-fit:contain;flex-shrink:0;
 }
-.report-doc .rmeta{
+
+/* BLOCK 1 — header info grid: 3 columns, always aligned, wraps instead of
+   ever cutting text off. */
+.report-doc .rmeta-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:4px 18px;
-  font-size:.86rem;
-  margin-bottom:14px;
-  font-family:-apple-system,Arial,sans-serif;
-}
-.report-doc .rmeta div b{color:var(--dark2);}
-.report-doc h3.rsection{
-  font-family:-apple-system,Arial,sans-serif;
+  grid-template-columns:repeat(3, 1fr);
+  gap:2px 16px;
   font-size:.78rem;
+  margin-bottom:12px;
+  border:1px solid #e4e0d4;
+  border-radius:6px;
+  padding:8px 10px;
+  background:#fafaf6;
+}
+.report-doc .rmeta-grid .rmeta-col{display:flex;flex-direction:column;gap:3px;}
+.report-doc .rmeta-grid .rmeta-item{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}
+.report-doc .rmeta-grid .rmeta-item span{color:#777;}
+.report-doc .rmeta-grid .rmeta-item b{text-align:right;overflow-wrap:anywhere;}
+
+.report-doc h3.rsection{
+  font-size:.72rem;
   text-transform:uppercase;
-  letter-spacing:.06em;
+  letter-spacing:.05em;
   color:#fff;
   background:var(--dark2);
-  padding:6px 10px;
+  padding:5px 9px;
   border-radius:5px;
-  margin:16px 0 8px;
+  margin:12px 0 6px;
 }
-.report-doc .rparam{
-  display:flex;justify-content:space-between;
-  padding:5px 4px;border-bottom:1px dotted #ccc;
-  font-family:-apple-system,Arial,sans-serif;font-size:.86rem;
+
+/* BLOCK 2 — results table. table-layout:auto + normal wrapping so long
+   labels (e.g. "Majeures") never get clipped; no oversized emoji per row. */
+.report-doc table{width:100%;border-collapse:collapse;font-size:.74rem;table-layout:auto;}
+.report-doc table th,.report-doc table td{
+  border:1px solid #ddd;padding:4px 6px;text-align:left;
+  overflow-wrap:anywhere;word-break:break-word;white-space:normal;
 }
+.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;}
+.report-doc table td.rcell-center{text-align:center;}
+
+/* Status badges — discreet colour chips, replacing repeated large emoji. */
+.report-doc .rbadge{
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  white-space:nowrap;
+}
+.report-doc .rbadge-ok{background:#e6f6ea;color:#1d7a3c;}
+.report-doc .rbadge-warn{background:#fff3d6;color:#8a6100;}
+.report-doc .rbadge-nc{background:#fdeceb;color:#b3261e;}
+
 .report-doc .rnc{
   border-left:4px solid var(--nc);
   background:#fdf3f2;
-  padding:8px 10px;margin-bottom:8px;
-  font-family:-apple-system,Arial,sans-serif;font-size:.82rem;
+  padding:7px 9px;margin-bottom:6px;
+  font-size:.74rem;
   border-radius:0 6px 6px 0;
 }
+.report-doc .rnc b{color:#8a2119;}
 .report-doc .ralert{
   border-left:4px solid var(--warn);
   background:#fdf7e9;
-  padding:8px 10px;margin-bottom:8px;border-radius:0 6px 6px 0;
-  font-family:-apple-system,Arial,sans-serif;font-size:.82rem;
+  padding:7px 9px;border-radius:0 6px 6px 0;font-size:.78rem;
 }
-.report-doc table{width:100%;border-collapse:collapse;font-family:-apple-system,Arial,sans-serif;font-size:.76rem;}
-.report-doc table th,.report-doc table td{border:1px solid #ccc;padding:5px 6px;text-align:left;}
-.report-doc table th{background:var(--dark2);color:#fff;font-size:.68rem;text-transform:uppercase;}
-.report-doc .rfoot{
-  margin-top:20px;display:flex;justify-content:space-between;
-  font-size:.78rem;color:#555;font-family:-apple-system,Arial,sans-serif;
-}
-.report-doc .rphotos{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;}
-.report-doc .rphotos img{
-  width:220px;height:220px;object-fit:contain;background:#f4f2ec;
-  border-radius:6px;border:1px solid #ccc;padding:4px;
-}
-.report-doc .rphotos-grid{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;}
-.report-doc .rphoto-cell{
-  width:240px;font-family:-apple-system,Arial,sans-serif;font-size:.72rem;
-  text-align:center;color:#444;
-}
-.report-doc .rphoto-cell img{
-  width:240px;height:240px;object-fit:contain;background:#f4f2ec;
-  border-radius:6px;border:1px solid #ccc;display:block;padding:4px;
-}
-.report-doc .rphoto-cap{margin-top:4px;font-weight:600;}
+.report-doc .ralert.rempty{border-left-color:#ccc;background:#f7f7f4;color:#888;font-style:italic;}
 
-/* Grille 4x4 façon page A4 pour les photos de preuve : nette, régulière, sans déformation
-   (object-fit:contain préserve les proportions d'origine de chaque photo). */
-.report-doc .rphotos-a4-page{
+/* BLOCK 3 — footer validation: controller + alerts + photo gallery all live
+   together at the bottom of the same page, never isolated on a new one. */
+.report-doc .rfooter-block{
+  margin-top:14px;padding-top:10px;border-top:2px solid #eee;
+  break-inside:avoid;page-break-inside:avoid;
+}
+.report-doc .rfoot{
+  margin-top:10px;display:flex;justify-content:space-between;
+  font-size:.76rem;color:#555;
+  border-top:1px solid #eee;padding-top:8px;
+}
+
+/* Photo gallery — max 3 thumbnails per row, compact, aligned, flows with the
+   page instead of forcing an A4-shaped page break. */
+.report-doc .rgallery{
   display:grid;
   grid-template-columns:repeat(3, 1fr);
-  grid-template-rows:repeat(3, 1fr);
-  gap:10px;
-  width:100%;
-  aspect-ratio:210/280; /* proportions proches d'une page A4 */
-  margin-top:10px;
-  page-break-inside:avoid;
+  gap:8px;
+  margin-top:6px;
 }
-.report-doc .rphoto-a4-cell{
-  position:relative;
-  overflow:hidden;
-  border-radius:7px;
-  border:1px solid #ccc;
-  background:#f4f2ec;
+.report-doc .rgallery .rgallery-cell{
+  border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
 }
-.report-doc .rphoto-a4-cell img{
-  width:100%;height:100%;object-fit:contain;display:block;
+.report-doc .rgallery .rgallery-cell img{
+  width:100%;height:110px;object-fit:cover;display:block;
 }
-.report-doc .rphoto-a4-empty{
-  background:#faf9f5;border-style:dashed;border-color:#ddd;
-}
-.report-doc .rphoto-a4-cap{
-  position:absolute;bottom:0;left:0;right:0;
-  background:rgba(20,15,10,.62);color:#fff;
-  font-family:-apple-system,Arial,sans-serif;font-size:.72rem;font-weight:600;
-  padding:4px 6px;text-align:center;line-height:1.25;
+.report-doc .rgallery .rgallery-cap{
+  font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .bottom-nav{
@@ -2402,26 +2404,17 @@ function showView(name){
 }
 
 /* ===================== RAPPORT UNITAIRE ===================== */
-/* Rend une série de photos en grille 3x3 (3 colonnes x 3 lignes = 9 photos), en grand
-   format, bien visible. Au-delà de 9 photos, un nouveau bloc est créé (pagination). */
-function renderPhotoGridA4(photos){
+/* Galerie de photos compacte : 3 miniatures par ligne maximum, alignées, sans
+   forcer un format de page A4 — elle s'intègre naturellement en bas du rapport
+   avec le reste du bloc de validation (contrôleur + alertes). */
+function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
-  var html = "";
-  for(var i=0; i<photos.length; i+=9){
-    var chunk = photos.slice(i, i+9);
-    html += '<div class="rphotos-a4-page">';
-    chunk.forEach(function(p){
-      html += '<div class="rphoto-a4-cell"><img src="'+p.src+'">'+
-        (p.caption ? '<div class="rphoto-a4-cap">'+escapeHtml(p.caption)+'</div>' : '')+
-        '</div>';
-    });
-    // compléter les cases vides pour garder une grille régulière et élégante
-    for(var j=chunk.length; j<9; j++){
-      html += '<div class="rphoto-a4-cell rphoto-a4-empty"></div>';
-    }
-    html += '</div>';
-  }
-  return html;
+  var cells = photos.map(function(p){
+    return '<div class="rgallery-cell"><img src="'+p.src+'">'+
+      (p.caption ? '<div class="rgallery-cap">'+escapeHtml(p.caption)+'</div>' : '')+
+      '</div>';
+  }).join("");
+  return '<div class="rgallery">'+cells+'</div>';
 }
 
 /* Légende de partage : simple et courte — type de rapport + ligne (le nom de la ligne
@@ -2438,74 +2431,96 @@ function buildSynthesisCaption(){
   return "Rapport de fin de quart — MIBEM COMPANY"+(quart ? " — "+quart : "");
 }
 
+/* Badge de statut discret (remplace les gros émojis répétés sur chaque ligne). */
+function statusBadge(st){
+  var cls = st==="nc" ? "rbadge-nc" : (st==="warn" ? "rbadge-warn" : "rbadge-ok");
+  return '<span class="rbadge '+cls+'">'+escapeHtml(STATUS_LABEL[st])+'</span>';
+}
+
 function buildSingleReportHtml(ctrl){
   var order = ctrl.paramOrder || Object.keys(ctrl.parametres);
-  var paramsHtml = order.map(function(p){
+
+  // BLOC 2 — tableau des résultats (colonnes largeur auto, jamais de texte coupé).
+  var rows = order.map(function(p){
     var pdata = ctrl.parametres[p];
     if(!pdata) return "";
-    var st = pdata.status;
-    var ech = pdata.echantillon ? (" ("+escapeHtml(pdata.echantillon)+")") : "";
-    return '<div class="rparam"><span>'+STATUS_ICON[st]+' '+escapeHtml(p)+ech+'</span><b>'+STATUS_LABEL[st]+'</b></div>';
+    var ech = pdata.echantillon ? escapeHtml(pdata.echantillon) : "—";
+    return '<tr><td>'+escapeHtml(p)+'</td><td class="rcell-center">'+ech+'</td><td class="rcell-center">'+statusBadge(pdata.status)+'</td></tr>';
   }).join("");
   if(ctrl.typeBouteille){
-    paramsHtml += '<div class="rparam"><span>✅ Type de bouteille</span><b>'+escapeHtml(ctrl.typeBouteille)+'</b></div>';
+    rows += '<tr><td>Type de bouteille</td><td class="rcell-center">—</td><td class="rcell-center">'+escapeHtml(ctrl.typeBouteille)+'</td></tr>';
   }
+  var resultsTable = '<table><tr><th>Paramètre</th><th>Échantillon</th><th>Statut</th></tr>'+rows+'</table>';
 
+  // Non-conformités : tableau compact, une ligne par NC, plutôt que de longs blocs répétés.
   var ncHtml = "";
   var ncKeys = Object.keys(ctrl.nc);
   if(ncKeys.length){
-    ncHtml += '<h3 class="rsection">🚨 Non-conformités détectées</h3>';
+    var ncRows = ncKeys.map(function(p){
+      var d = ctrl.nc[p];
+      return '<tr>'+
+        '<td>'+escapeHtml(p)+'</td>'+
+        '<td>'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td>'+escapeHtml(d.defaut||"—")+'</td>'+
+        '<td>'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+      '</tr>';
+    }).join("");
+    ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
+      '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th></tr>'+ncRows+'</table>';
+    // Causes + photos NC restent en texte libre juste en dessous (peu de volume habituellement).
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
-      var photosHtml = (d.photos||[]).map(function(src){ return '<img src="'+src+'">'; }).join("");
-      ncHtml += '<div class="rnc">'+
-        '<b>DESCRIPTION DE LA NON-CONFORMITÉ :</b> '+escapeHtml(d.description||"—")+'<br>'+
-        '<b>NIVEAU :</b> '+escapeHtml(d.niveau||"—")+'<br>'+
-        '<b>DÉFAUTS :</b> '+escapeHtml(d.defaut||"—")+'<br>'+
-        '<b>Quantité concernée :</b> '+escapeHtml(d.quantite||"—")+'<br>'+
-        '<b>CLASSE DU DÉFAUT :</b> '+escapeHtml(d.classeDefaut||"—")+'<br>'+
-        '<b>PARAMÈTRES NC :</b> '+escapeHtml(p)+'<br>'+
-        '<b>ACTION IMMÉDIATE :</b> '+escapeHtml(d.actionImmediate||"—")+'<br>'+
-        '<b>NC TRAITÉE :</b> '+escapeHtml(d.ncTraitee||"Non")+(d.ncTraitee==="Oui" && d.clotureDetails ? (" — "+escapeHtml(d.clotureDetails)) : "")+'<br>'+
-        '<b>CAUSES DE LA NON-CONFORMITÉ :</b> '+escapeHtml(d.cause||"—")+'<br>'+
-        '<b>Photo jointe :</b> '+((d.photos||[]).length ? "Oui" : "Non")+
-        (photosHtml ? '<div class="rphotos">'+photosHtml+'</div>' : '')+
-      '</div>';
+      var photosHtml = (d.photos||[]).length ? renderPhotoGallery(d.photos) : "";
+      if((d.cause && d.cause.trim()) || photosHtml){
+        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
+          (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
+          photosHtml+'</div>';
+      }
     });
   }
 
-  var photosHtmlDoc = "";
-  if(ctrl.photos && ctrl.photos.length){
-    photosHtmlDoc = '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGridA4(ctrl.photos);
-  }
-
-  var alertHtml = "";
-  if(ctrl.alertes && ctrl.alertes.trim()){
-    alertHtml = '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="ralert">'+escapeHtml(ctrl.alertes).replace(/\n/g,"<br>")+'</div>';
-  }
+  // BLOC 3 — validation en bas de page : contrôleur + alertes (jamais de texte
+  // inventé — "Aucune alerte" explicite si le champ est vide) + photos terrain,
+  // le tout fusionné dans un seul bloc pour ne jamais être isolé sur une nouvelle page.
+  var alertText = (ctrl.alertes && ctrl.alertes.trim()) ? escapeHtml(ctrl.alertes).replace(/\n/g,"<br>") : "Aucune alerte";
+  var alertClass = (ctrl.alertes && ctrl.alertes.trim()) ? "ralert" : "ralert rempty";
+  var photosHtml = (ctrl.photos && ctrl.photos.length)
+    ? '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGallery(ctrl.photos)
+    : "";
 
   return (
     '<div class="report-doc" id="reportDocInner">'+
       '<div class="rheader">'+
         '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
-        '<div class="rtitle">📋 Rapport de contrôle</div>'+
+        '<div><div class="rtitle">📋 Rapport de contrôle</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
       '</div>'+
-      '<div class="rmeta">'+
-        '<div><b>Date :</b> '+escapeHtml(dmy(ctrl.date))+'</div>'+
-        '<div><b>Quart :</b> '+escapeHtml(ctrl.quart)+'</div>'+
-        '<div><b>Heure :</b> '+escapeHtml(ctrl.heure)+'</div>'+
-        '<div><b>Ligne :</b> '+escapeHtml(ctrl.ligne)+'</div>'+
-        '<div><b>Produit :</b> '+escapeHtml(ctrl.produit)+'</div>'+
-        '<div><b>Format :</b> '+escapeHtml(ctrl.format||"—")+'</div>'+
-        '<div><b>Emballage :</b> '+escapeHtml(ctrl.emballage)+'</div>'+
-        '<div><b>N° de lot :</b> '+escapeHtml(ctrl.lot||"—")+'</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(ctrl.date))+'</b></div>'+
+          '<div class="rmeta-item"><span>Heure</span><b>'+escapeHtml(ctrl.heure)+'</b></div>'+
+          '<div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(ctrl.quart)+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Ligne</span><b>'+escapeHtml(ctrl.ligne)+'</b></div>'+
+          '<div class="rmeta-item"><span>Produit</span><b>'+escapeHtml(ctrl.produit)+'</b></div>'+
+          '<div class="rmeta-item"><span>Format</span><b>'+escapeHtml(ctrl.format||"—")+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Emballage</span><b>'+escapeHtml(ctrl.emballage)+'</b></div>'+
+          '<div class="rmeta-item"><span>N° de lot</span><b>'+escapeHtml(ctrl.lot||"—")+'</b></div>'+
+        '</div>'+
       '</div>'+
       '<h3 class="rsection">⚙️ Paramètres contrôlés</h3>'+
-      paramsHtml+
+      resultsTable+
       ncHtml+
-      photosHtmlDoc+
-      alertHtml+
-      '<div class="rfoot"><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '<div class="rfooter-block">'+
+        '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
+        photosHtml+
+        '<div class="rfoot"><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '</div>'+
     '</div>'
   );
 }
@@ -2541,72 +2556,92 @@ function buildSynthesisHtml(){
     lignesStat[c.ligne].nc += ncKeys.length;
   });
 
+  // Tableau des indicateurs : table-layout:auto + wrap (voir CSS) garantit que
+  // "Majeures" et les autres libellés ne sont jamais coupés, quelle que soit
+  // la largeur d'export.
+  var indicatorsTable =
+    '<table><tr><th>Contrôles</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
+    '<tr><td class="rcell-center">'+controls.length+'</td><td class="rcell-center">'+totalNC+'</td>'+
+    '<td class="rcell-center">'+totalMin+'</td><td class="rcell-center">'+totalMaj+'</td><td class="rcell-center">'+totalCrit+'</td></tr></table>';
+
   var tableRows = controls.map(function(c){
     var w = worstStatus(c);
-    var icon = w==="nc" ? "🚨" : (w==="warn" ? "🟨" : "✅");
     var ncPhotoCount = 0;
     Object.keys(c.nc).forEach(function(k){ ncPhotoCount += (c.nc[k].photos||[]).length; });
     var photoCount = (c.photos||[]).length + ncPhotoCount;
     return '<tr><td>'+escapeHtml(c.heure)+'</td><td>'+escapeHtml(c.ligne)+'</td><td>'+escapeHtml(c.produit)+'</td>'+
       '<td>'+escapeHtml(c.format||"—")+'</td><td>'+escapeHtml(c.lot||"—")+'</td>'+
-      '<td>'+icon+' '+Object.keys(c.nc).length+'</td><td>📷 '+photoCount+'</td></tr>';
+      '<td class="rcell-center">'+statusBadge(w)+'</td>'+
+      '<td class="rcell-center">'+Object.keys(c.nc).length+'</td><td class="rcell-center">'+photoCount+'</td></tr>';
   }).join("");
 
   var ligneRows = Object.keys(lignesStat).map(function(l){
     var s = lignesStat[l];
-    var pct = s.n>0 ? Math.round(((s.n-s.nc)/s.n)*100) : 100;
-    return '<tr><td>'+escapeHtml(l)+'</td><td>'+s.n+'</td><td>'+s.nc+'</td></tr>';
+    return '<tr><td>'+escapeHtml(l)+'</td><td class="rcell-center">'+s.n+'</td><td class="rcell-center">'+s.nc+'</td></tr>';
   }).join("");
 
-  var ncDetailHtml = "";
+  // Non-conformités du quart : tableau compact plutôt que blocs répétés.
+  var ncRows = [];
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
-      ncDetailHtml += '<div class="rnc"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' · '+escapeHtml(c.produit)+'</b><br>'+
-        '<b>Paramètre :</b> '+escapeHtml(p)+' — <b>Description :</b> '+escapeHtml(d.description||"—")+'<br>'+
-        '<b>Défaut :</b> '+escapeHtml(d.defaut||"—")+' · <b>Classe :</b> '+escapeHtml(d.classeDefaut||"—")+' · <b>Niveau :</b> '+escapeHtml(d.niveau||"—")+'<br>'+
-        '<b>Quantité :</b> '+escapeHtml(d.quantite||"—")+' · <b>NC traitée :</b> '+escapeHtml(d.ncTraitee||"Non")+
-      '</div>';
+      ncRows.push('<tr>'+
+        '<td>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
+        '<td>'+escapeHtml(p)+'</td>'+
+        '<td>'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+      '</tr>');
     });
   });
-  if(!ncDetailHtml) ncDetailHtml = '<p style="font-family:-apple-system,Arial,sans-serif;font-size:.85rem;">Aucune non-conformité détectée durant ce quart.</p>';
+  var ncDetailHtml = ncRows.length
+    ? '<table><tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th></tr>'+ncRows.join("")+'</table>'
+    : '<p style="font-size:.8rem;color:#888;font-style:italic;">Aucune non-conformité détectée durant ce quart.</p>';
 
-  var alertesHtml = "";
+  // Points d'alerte — jamais de texte inventé : "Aucune alerte" explicite si rien n'a été saisi.
+  var alertesLines = [];
   controls.forEach(function(c){
     if(c.alertes && c.alertes.trim()){
-      alertesHtml += '<div class="ralert"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' :</b> '+escapeHtml(c.alertes)+'</div>';
+      alertesLines.push('<div class="ralert"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' :</b> '+escapeHtml(c.alertes)+'</div>');
     }
   });
-  if(!alertesHtml) alertesHtml = '<p style="font-family:-apple-system,Arial,sans-serif;font-size:.85rem;">Aucun point d\'alerte signalé pour le quart suivant.</p>';
+  var alertesHtml = alertesLines.length ? alertesLines.join("") : '<div class="ralert rempty">Aucune alerte</div>';
 
-  var synthPhotosHtml = "";
-  if(state.synthPhotos && state.synthPhotos.length){
-    synthPhotosHtml = '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGridA4(state.synthPhotos);
-  }
+  var synthPhotosHtml = (state.synthPhotos && state.synthPhotos.length)
+    ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGallery(state.synthPhotos)
+    : "";
 
   return (
     '<div class="report-doc" id="reportDocInner">'+
       '<div class="rheader">'+
         '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
-        '<div class="rtitle">📋 Rapport de fin de quart</div>'+
+        '<div><div class="rtitle">📋 Rapport de fin de quart</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
       '</div>'+
-      '<div class="rmeta">'+
-        '<div><b>Date :</b> '+escapeHtml(dmy(date))+'</div>'+
-        '<div><b>Quart :</b> '+escapeHtml(quart)+'</div>'+
-        '<div><b>Contrôles effectués :</b> '+controls.length+'</div>'+
-        '<div><b>Visa responsable :</b> '+escapeHtml(visa)+'</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(date))+'</b></div>'+
+          '<div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quart)+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Contrôles</span><b>'+controls.length+'</b></div>'+
+          '<div class="rmeta-item"><span>NC totales</span><b>'+totalNC+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Visa</span><b>'+escapeHtml(visa)+'</b></div>'+
+        '</div>'+
       '</div>'+
       '<h3 class="rsection">📊 Indicateurs du quart</h3>'+
-      '<table><tr><th>Contrôles</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
-      '<tr><td>'+controls.length+'</td><td>'+totalNC+'</td><td>'+totalMin+'</td><td>'+totalMaj+'</td><td>'+totalCrit+'</td></tr></table>'+
+      indicatorsTable+
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
       '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
-      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>Photos</th></tr>'+tableRows+'</table>'+
+      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>NC</th><th>Photos</th></tr>'+tableRows+'</table>'+
       '<h3 class="rsection">🚨 Non-conformités du quart</h3>'+ncDetailHtml+
-      synthPhotosHtml+
-      '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
-      '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '<div class="rfooter-block">'+
+        '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
+        synthPhotosHtml+
+        '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '</div>'+
     '</div>'
   );
 }
