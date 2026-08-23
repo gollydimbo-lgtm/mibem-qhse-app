@@ -2154,6 +2154,10 @@ function renderTerrainPhotos(){
 function renderSynthPhotos(){
   saveShiftToStorage();
   renderPhotoGrid($("#synthPhotoList"), state.synthPhotos, renderSynthPhotos, true);
+  // Le bloc d'aperçu/export (#synthDocWrap) est généré une fois à l'ouverture de l'onglet
+  // et ne se met pas à jour tout seul — sans ce rafraîchissement, la photo ajoutée
+  // n'apparaît jamais dans le rapport exporté tant que l'onglet n'est pas rouvert.
+  if($("#synthPreviewHost") && $("#synthPreviewHost").innerHTML.trim()) renderSynthPreview();
 }
 
 /* Redimensionne une photo côté client avant stockage : conserve une très haute
@@ -2471,6 +2475,12 @@ function buildSingleReportHtml(ctrl){
   if(ncKeys.length){
     var ncRows = ncKeys.map(function(p){
       var d = ctrl.nc[p];
+      var photos = (d.photos||[]).map(function(ph){ return (typeof ph === "string") ? ph : ph.src; }).filter(Boolean);
+      // Vignette(s) directement dans la colonne — c'est ici, et seulement ici, que les
+      // photos prises pour cette non-conformité sont visibles dans le rapport.
+      var photoCell = photos.length
+        ? photos.map(function(src){ return '<img src="'+src+'" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid #ccc;margin:1px;">'; }).join("")
+        : '<span style="color:#aaa;">—</span>';
       return '<tr>'+
         '<td>'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
@@ -2479,12 +2489,13 @@ function buildSingleReportHtml(ctrl){
         '<td class="rwrap">'+escapeHtml(d.defaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center">'+photoCell+'</td>'+
       '</tr>';
     }).join("");
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
-      '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th></tr>'+ncRows+'</table>';
-    // Cause + clôture en texte libre juste en dessous — les photos ne sont plus
-    // dupliquées ici : elles restent uniquement dans la section "Photos terrain".
+      '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+ncRows+'</table>';
+    // Cause + clôture en texte libre juste en dessous (jamais de photo ici : elles
+    // vivent uniquement dans la colonne "Photo" du tableau ci-dessus, sans duplication).
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
       if(d.cause && d.cause.trim()){
