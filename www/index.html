@@ -452,10 +452,10 @@ main{
   padding:8px 10px;
   background:#fafaf6;
 }
-.report-doc .rmeta-grid .rmeta-col{display:flex;flex-direction:column;gap:3px;}
+.report-doc .rmeta-grid .rmeta-col{display:flex;flex-direction:column;gap:3px;min-width:0;}
 .report-doc .rmeta-grid .rmeta-item{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}
-.report-doc .rmeta-grid .rmeta-item span{color:#777;}
-.report-doc .rmeta-grid .rmeta-item b{text-align:right;overflow-wrap:anywhere;}
+.report-doc .rmeta-grid .rmeta-item span{color:#777;white-space:nowrap;}
+.report-doc .rmeta-grid .rmeta-item b{text-align:right;white-space:nowrap;overflow-wrap:normal;}
 
 .report-doc h3.rsection{
   font-size:.72rem;
@@ -473,9 +473,12 @@ main{
 .report-doc table{width:100%;border-collapse:collapse;font-size:.74rem;table-layout:auto;}
 .report-doc table th,.report-doc table td{
   border:1px solid #ddd;padding:4px 6px;text-align:left;
-  overflow-wrap:anywhere;word-break:break-word;white-space:normal;
+  white-space:nowrap;overflow-wrap:normal;word-break:normal;
 }
-.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;}
+.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;}
+/* Réservé aux colonnes de texte libre (description, action immédiate, cause) où un
+   retour à la ligne normal est acceptable et nécessaire — jamais lettre par lettre. */
+.report-doc table td.rwrap{white-space:normal;overflow-wrap:break-word;word-break:normal;}
 .report-doc table td.rcell-center{text-align:center;}
 
 /* Status badges — discreet colour chips, replacing repeated large emoji. */
@@ -2460,11 +2463,11 @@ function buildSingleReportHtml(ctrl){
       var d = ctrl.nc[p];
       return '<tr>'+
         '<td>'+escapeHtml(p)+'</td>'+
-        '<td>'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
-        '<td>'+escapeHtml(d.defaut||"—")+'</td>'+
-        '<td>'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.defaut||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
       '</tr>';
     }).join("");
@@ -2588,7 +2591,7 @@ function buildSynthesisHtml(){
       ncRows.push('<tr>'+
         '<td>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
         '<td>'+escapeHtml(p)+'</td>'+
-        '<td>'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
       '</tr>');
@@ -2750,6 +2753,26 @@ function saveDocumentToNativeStorage(base64Data, fileName){
 /* Génère le PDF section par section plutôt qu'en une seule capture découpée à l'aveugle :
    chaque grille de photos (.rphotos-a4-page) obtient sa PROPRE page, jamais coupée en deux
    entre deux pages — c'est ce qui corrige les "éléments discontinus" du PDF partagé. */
+/* Largeur de rendu FIXE pour tous les exports (image/PDF), indépendante de la largeur
+   réelle de l'écran du téléphone (souvent ~380px, ce qui forçait un retour à la ligne
+   lettre par lettre). 780px correspond à une largeur de page A4 utilisable à 96dpi. */
+var EXPORT_WIDTH_PX = 780;
+
+/* Clone le contenu du rapport dans un conteneur hors-écran à largeur fixe A4, pour que
+   la capture (html2canvas) ne dépende jamais de la largeur du viewport mobile. */
+function cloneForExport(node){
+  var contentRoot = node.querySelector(".report-doc") || node;
+  var wrapper = document.createElement("div");
+  wrapper.style.position = "fixed";
+  wrapper.style.left = "-99999px";
+  wrapper.style.top = "0";
+  wrapper.style.width = EXPORT_WIDTH_PX + "px";
+  wrapper.style.background = "#ffffff";
+  wrapper.appendChild(contentRoot.cloneNode(true));
+  document.body.appendChild(wrapper);
+  return wrapper;
+}
+
 function buildPdfFromNode(node){
   var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
   var pdf = new jsPDFCtor({unit:"pt", format:"a4"});
@@ -2762,74 +2785,80 @@ function buildPdfFromNode(node){
   var contentRoot = node.querySelector(".report-doc") || node;
   var children = Array.prototype.slice.call(contentRoot.children);
 
-  // Regroupe les enfants directs : chaque grille photo devient un groupe à elle seule,
-  // le reste (en-tête, méta, paramètres, NC, alertes, pied de page) reste groupé ensemble.
-  var groups = [];
-  var currentFlow = [];
+  // Deux groupes seulement : "head" (en-tête + tous les tableaux — reste TOUJOURS
+  // intact, jamais mélangé au bloc suivant) et "footer" (photos terrain + contrôleur —
+  // seul bloc autorisé à passer sur une deuxième page si la place manque).
+  var headNodes = [];
+  var footerNode = null;
   children.forEach(function(child){
-    if(child.classList && child.classList.contains("rphotos-a4-page")){
-      if(currentFlow.length){ groups.push({type:"flow", nodes:currentFlow}); currentFlow=[]; }
-      groups.push({type:"photopage", nodes:[child]});
+    if(child.classList && child.classList.contains("rfooter-block")){
+      footerNode = child;
     } else {
-      currentFlow.push(child);
+      headNodes.push(child);
     }
   });
-  if(currentFlow.length) groups.push({type:"flow", nodes:currentFlow});
 
-  var firstPage = true;
-
-  function renderGroup(group){
+  function renderNodesToCanvas(nodes){
     var wrapper = document.createElement("div");
     wrapper.className = contentRoot.className;
     wrapper.style.position = "fixed";
     wrapper.style.left = "-99999px";
     wrapper.style.top = "0";
-    wrapper.style.width = contentRoot.offsetWidth + "px";
+    wrapper.style.width = EXPORT_WIDTH_PX + "px";
     wrapper.style.background = "#ffffff";
-    group.nodes.forEach(function(n){ wrapper.appendChild(n.cloneNode(true)); });
+    nodes.forEach(function(n){ wrapper.appendChild(n.cloneNode(true)); });
     document.body.appendChild(wrapper);
     return html2canvas(wrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
       document.body.removeChild(wrapper);
-      var imgData = canvas.toDataURL("image/png");
-      var imgW = maxW;
-      var imgH = imgW * canvas.height / canvas.width;
-
-      if(group.type === "photopage"){
-        // Toujours sur sa propre page, jamais découpée, centrée verticalement si besoin.
-        if(!firstPage) pdf.addPage();
-        firstPage = false;
-        if(imgH > maxH){ imgH = maxH; imgW = imgH * canvas.width / canvas.height; }
-        var x = margin + (maxW - imgW)/2;
-        var y = margin + Math.max(0, (maxH - imgH)/2);
-        pdf.addImage(imgData, "PNG", x, y, imgW, imgH);
-      } else if(imgH <= maxH){
-        if(!firstPage) pdf.addPage();
-        firstPage = false;
-        pdf.addImage(imgData, "PNG", margin, margin, imgW, imgH);
-      } else {
-        var ratio = canvas.width / imgW;
-        var pageCanvasHeight = maxH * ratio;
-        var offset = 0;
-        while(offset < canvas.height){
-          var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
-          var sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceH;
-          var ctx = sliceCanvas.getContext("2d");
-          ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          if(!firstPage) pdf.addPage();
-          firstPage = false;
-          pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
-          offset += sliceH;
-        }
-      }
+      return canvas;
     });
   }
 
+  // yCursor : position verticale libre sur la page courante après le dernier bloc posé
+  // (null = rien encore posé sur cette page, càd. une nouvelle page est nécessaire).
+  var yCursor = null;
+
+  function placeCanvasFlowing(canvas){
+    var imgW = maxW;
+    var imgH = imgW * canvas.height / canvas.width;
+    if(imgH <= maxH){
+      // Le bloc tient sur une seule page : le placer à la suite du contenu déjà posé
+      // s'il reste assez de place, sinon démarrer une nouvelle page.
+      if(yCursor === null || yCursor + imgH > margin + maxH){
+        if(yCursor !== null) pdf.addPage();
+        yCursor = margin;
+      }
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, yCursor, imgW, imgH);
+      yCursor += imgH;
+    } else {
+      // Le bloc dépasse une page entière : le découper proprement page par page.
+      var ratio = canvas.width / imgW;
+      var pageCanvasHeight = maxH * ratio;
+      var offset = 0;
+      while(offset < canvas.height){
+        var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
+        var sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceH;
+        var ctx = sliceCanvas.getContext("2d");
+        ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if(yCursor !== null) pdf.addPage();
+        pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
+        yCursor = margin + sliceH/ratio;
+        offset += sliceH;
+      }
+    }
+  }
+
   var chain = Promise.resolve();
-  groups.forEach(function(group){
-    chain = chain.then(function(){ return renderGroup(group); });
-  });
+  if(headNodes.length){
+    chain = chain.then(function(){ return renderNodesToCanvas(headNodes); })
+      .then(function(canvas){ placeCanvasFlowing(canvas); });
+  }
+  if(footerNode){
+    chain = chain.then(function(){ return renderNodesToCanvas([footerNode]); })
+      .then(function(canvas){ placeCanvasFlowing(canvas); });
+  }
 
   return chain.then(function(){
     var dataUri = pdf.output("datauristring");
@@ -2842,7 +2871,9 @@ function buildPdfFromNode(node){
 function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
-    html2canvas(node, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    var exportWrapper = cloneForExport(node);
+    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+      document.body.removeChild(exportWrapper);
       var dataUrl = canvas.toDataURL("image/png");
       if(isNativeApp() && window.Capacitor.Plugins.Media){
         saveImageToNativeGallery(dataUrl, filename)
@@ -2924,7 +2955,9 @@ function shareNode(node, filename, text, kind){
   kind = kind || "pdf";
   if(kind === "png"){
     toast("Préparation de l'image...");
-    html2canvas(node, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    var exportWrapper = cloneForExport(node);
+    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+      document.body.removeChild(exportWrapper);
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
           shareBlobOrDownload(base64, blob, filename+".png", "image/png", text, "image");
