@@ -2483,14 +2483,14 @@ function buildSingleReportHtml(ctrl){
     }).join("");
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
       '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th></tr>'+ncRows+'</table>';
-    // Causes + photos NC restent en texte libre juste en dessous (peu de volume habituellement).
+    // Cause + clôture en texte libre juste en dessous — les photos ne sont plus
+    // dupliquées ici : elles restent uniquement dans la section "Photos terrain".
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
-      var photosHtml = (d.photos||[]).length ? renderPhotoGallery(d.photos) : "";
-      if((d.cause && d.cause.trim()) || photosHtml){
-        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
+      if(d.cause && d.cause.trim()){
+        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause)+
           (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
-          photosHtml+'</div>';
+          '</div>';
       }
     });
   }
@@ -2582,7 +2582,7 @@ function buildSynthesisHtml(){
     var ncPhotoCount = 0;
     Object.keys(c.nc).forEach(function(k){ ncPhotoCount += (c.nc[k].photos||[]).length; });
     var photoCount = (c.photos||[]).length + ncPhotoCount;
-    return '<tr><td>'+escapeHtml(c.heure)+'</td><td>'+escapeHtml(c.ligne)+'</td><td>'+escapeHtml(c.produit)+'</td>'+
+    return '<tr><td>'+escapeHtml(c.heure)+'</td><td class="rwrap">'+escapeHtml(c.ligne)+'</td><td class="rwrap">'+escapeHtml(c.produit)+'</td>'+
       '<td>'+escapeHtml(c.format||"—")+'</td><td>'+escapeHtml(c.lot||"—")+'</td>'+
       '<td class="rcell-center">'+statusBadge(w)+'</td>'+
       '<td class="rcell-center">'+Object.keys(c.nc).length+'</td><td class="rcell-center">'+photoCount+'</td></tr>';
@@ -2620,25 +2620,9 @@ function buildSynthesisHtml(){
   });
   var alertesHtml = alertesLines.length ? alertesLines.join("") : '<div class="ralert rempty">Aucune alerte</div>';
 
-  // Toutes les photos du quart (preuves terrain + preuves NC de chaque contrôle),
-  // avec légende — corrige le bug où seul un nombre apparaissait sans les images.
-  var allShiftPhotos = [];
-  controls.forEach(function(c){
-    (c.photos||[]).forEach(function(p){
-      var src = (typeof p === "string") ? p : p.src;
-      if(src) allShiftPhotos.push({src:src, caption:c.heure+" · "+c.ligne});
-    });
-    Object.keys(c.nc).forEach(function(k){
-      (c.nc[k].photos||[]).forEach(function(p){
-        var src = (typeof p === "string") ? p : p.src;
-        if(src) allShiftPhotos.push({src:src, caption:"NC "+k+" · "+c.heure});
-      });
-    });
-  });
-  var shiftPhotosHtml = allShiftPhotos.length
-    ? '<h3 class="rsection">📷 Photos du quart (preuves terrain et NC)</h3>'+renderPhotoGallery(allShiftPhotos)
-    : "";
-
+  // Seule la photo de la fiche de rapport (le document/récapitulatif visuel du quart)
+  // apparaît ici — jamais les photos de contrôle terrain, produit ou défaut, qui
+  // restent propres au rapport de contrôle individuel de chaque ligne.
   var synthPhotosHtml = (state.synthPhotos && state.synthPhotos.length)
     ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGallery(state.synthPhotos)
     : "";
@@ -2667,13 +2651,18 @@ function buildSynthesisHtml(){
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
       '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
-      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th>'+
-        '<th style="font-size:.58rem;padding-left:8px;padding-right:8px;">NC</th>'+
-        '<th style="font-size:.58rem;padding-left:8px;padding-right:8px;">Photos</th></tr>'+tableRows+'</table>'+
+      '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:9%;"><col style="width:15%;"><col style="width:19%;">'+
+          '<col style="width:11%;"><col style="width:11%;"><col style="width:14%;">'+
+          '<col style="width:8%;"><col style="width:13%;">'+
+        '</colgroup>'+
+        '<tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>NC</th><th>Photos</th></tr>'+
+        tableRows+
+      '</table>'+
       '<h3 class="rsection">🚨 Non-conformités du quart</h3>'+ncDetailHtml+
       '<div class="rfooter-block">'+
         '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
-        shiftPhotosHtml+
         synthPhotosHtml+
         '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
       '</div>'+
