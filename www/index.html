@@ -472,10 +472,10 @@ main{
    labels (e.g. "Majeures") never get clipped; no oversized emoji per row. */
 .report-doc table{width:100%;border-collapse:collapse;font-size:.74rem;table-layout:auto;}
 .report-doc table th,.report-doc table td{
-  border:1px solid #ddd;padding:4px 6px;text-align:left;
+  border:1px solid #ddd;padding:8px 8px;text-align:left;line-height:1.4;
   white-space:nowrap;overflow-wrap:normal;word-break:normal;
 }
-.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;}
+.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;padding:9px 8px;}
 /* Réservé aux colonnes de texte libre (description, action immédiate, cause) où un
    retour à la ligne normal est acceptable et nécessaire — jamais lettre par lettre. */
 .report-doc table td.rwrap{white-space:normal;overflow-wrap:break-word;word-break:normal;}
@@ -518,24 +518,21 @@ main{
   border-top:1px solid #eee;padding-top:8px;
 }
 
-/* Photo gallery — max 3 thumbnails per row, compact, centered (balanced margins
-   even when there are fewer than 3 photos), flows with the page instead of
-   forcing an A4-shaped page break. */
+/* Photo gallery — règle unique pour TOUTES les sections photo de l'application
+   (Photos terrain, Photos de non-conformité, photo de fiche de synthèse) :
+   grille stricte de 4 vignettes par ligne, jamais coincées dans un tableau,
+   toujours avec leurs proportions d'origine préservées (object-fit:cover). */
 .report-doc .rgallery{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:8px;
-  margin:6px auto 0;
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+  margin:8px auto 0;
 }
 .report-doc .rgallery .rgallery-cell{
   border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
-  width:calc(33.333% - 6px);
-  max-width:220px;
-  flex:0 0 auto;
 }
 .report-doc .rgallery .rgallery-cell img{
-  width:100%;height:110px;object-fit:cover;display:block;
+  width:100%;height:150px;min-height:150px;object-fit:cover;display:block;
 }
 .report-doc .rgallery .rgallery-cap{
   font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
@@ -2415,9 +2412,10 @@ function showView(name){
 }
 
 /* ===================== RAPPORT UNITAIRE ===================== */
-/* Galerie de photos compacte : 3 miniatures par ligne maximum, alignées, sans
-   forcer un format de page A4 — elle s'intègre naturellement en bas du rapport
-   avec le reste du bloc de validation (contrôleur + alertes). */
+/* Galerie de photos — règle unique de l'application : 4 miniatures larges par
+   ligne (150px min.), proportions d'origine toujours préservées (object-fit:cover),
+   jamais coincées dans une cellule de tableau. S'intègre en bas du rapport avec
+   le reste du bloc de validation (contrôleur + alertes). */
 function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
   var cells = photos.map(function(p){
@@ -2426,7 +2424,7 @@ function renderPhotoGallery(photos){
     var src = (typeof p === "string") ? p : p.src;
     var caption = (typeof p === "string") ? "" : (p.caption || "");
     if(!src) return "";
-    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:110px;object-fit:cover;display:block;">'+
+    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:cover;display:block;">'+
       (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
       '</div>';
   }).join("");
@@ -2476,11 +2474,6 @@ function buildSingleReportHtml(ctrl){
     var ncRows = ncKeys.map(function(p){
       var d = ctrl.nc[p];
       var photos = (d.photos||[]).map(function(ph){ return (typeof ph === "string") ? ph : ph.src; }).filter(Boolean);
-      // Vignette(s) directement dans la colonne — c'est ici, et seulement ici, que les
-      // photos prises pour cette non-conformité sont visibles dans le rapport.
-      var photoCell = photos.length
-        ? photos.map(function(src){ return '<img src="'+src+'" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid #ccc;margin:1px;">'; }).join("")
-        : '<span style="color:#aaa;">—</span>';
       return '<tr>'+
         '<td>'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
@@ -2489,13 +2482,12 @@ function buildSingleReportHtml(ctrl){
         '<td class="rwrap">'+escapeHtml(d.defaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
-        '<td class="rcell-center">'+photoCell+'</td>'+
+        '<td class="rcell-center">'+(photos.length ? ("📷 "+photos.length) : "—")+'</td>'+
       '</tr>';
     }).join("");
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
       '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+ncRows+'</table>';
-    // Cause + clôture en texte libre juste en dessous (jamais de photo ici : elles
-    // vivent uniquement dans la colonne "Photo" du tableau ci-dessus, sans duplication).
+    // Cause + clôture en texte libre juste en dessous.
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
       if(d.cause && d.cause.trim()){
@@ -2504,15 +2496,32 @@ function buildSingleReportHtml(ctrl){
           '</div>';
       }
     });
+    // Bloc dédié "Photos de la non-conformité", juste sous le tableau des défauts —
+    // jamais coincées dans une cellule, toujours en grande vignette (150px min., 4/ligne).
+    var ncPhotos = [];
+    ncKeys.forEach(function(p){
+      (ctrl.nc[p].photos||[]).forEach(function(ph){
+        var src = (typeof ph === "string") ? ph : ph.src;
+        if(src) ncPhotos.push({src:src, caption:p});
+      });
+    });
+    if(ncPhotos.length){
+      ncHtml += '<h3 class="rsection">🔍 Photos de la non-conformité</h3>'+renderPhotoGallery(ncPhotos);
+    }
   }
 
   // BLOC 3 — validation en bas de page : contrôleur + alertes (jamais de texte
-  // inventé — "Aucune alerte" explicite si le champ est vide) + photos terrain,
-  // le tout fusionné dans un seul bloc pour ne jamais être isolé sur une nouvelle page.
+  // inventé — "Aucune alerte" explicite si le champ est vide) + photos terrain
+  // générales (hors NC, affichées séparément ci-dessus), le tout fusionné dans un
+  // seul bloc pour ne jamais être isolé sur une nouvelle page.
   var alertText = (ctrl.alertes && ctrl.alertes.trim()) ? escapeHtml(ctrl.alertes).replace(/\n/g,"<br>") : "Aucune alerte";
   var alertClass = (ctrl.alertes && ctrl.alertes.trim()) ? "ralert" : "ralert rempty";
-  var photosHtml = (ctrl.photos && ctrl.photos.length)
-    ? '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGallery(ctrl.photos)
+  var terrainPhotos = (ctrl.photos||[]).map(function(p){
+    var src = (typeof p === "string") ? p : p.src;
+    return src ? {src:src, caption:""} : null;
+  }).filter(Boolean);
+  var photosHtml = terrainPhotos.length
+    ? '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGallery(terrainPhotos)
     : "";
 
   return (
