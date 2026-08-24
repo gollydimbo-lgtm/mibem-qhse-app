@@ -758,6 +758,48 @@ main{
       <button class="btn btn-dark btn-block" id="btnBuildSynth">📋 Générer la synthèse</button>
     </div>
     <div id="synthPreviewHost"></div>
+
+    <!-- ============ MODULE 1 : SYNTHÈSE PRODUITS ET LOTS DU QUART ============ -->
+    <div class="card">
+      <h2>📦 Synthèse produits et lots du quart</h2>
+      <p class="hint" style="margin-top:-6px;">Extrait automatiquement les lignes déjà contrôlées — aucune ressaisie, ces données viennent de tes rapports de contrôle.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Date du quart</label>
+        <select id="extract-date"></select>
+      </div>
+      <div class="field">
+        <label>Quart</label>
+        <select id="extract-quart"></select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract1">🔎 Extraire les produits et lots</button>
+      <div id="extract1PreviewHost"></div>
+      <div class="btn-row" id="extract1ExportRow" style="display:none;margin-top:10px;">
+        <button class="btn btn-ghost" id="btnExtract1PDF">📄 Exporter en PDF</button>
+        <button class="btn btn-ghost" id="btnExtract1Excel">📊 Exporter en Excel</button>
+        <button class="btn btn-ghost" id="btnExtract1PNG">📲 Partager en image</button>
+      </div>
+    </div>
+
+    <!-- ============ MODULE 2 : JOURNAL ISOLÉ DES NON-CONFORMITÉS ============ -->
+    <div class="card">
+      <h2>🚨 Journal isolé des non-conformités</h2>
+      <p class="hint" style="margin-top:-6px;">Isole uniquement les anomalies détectées durant le quart sélectionné — aucune ressaisie.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Date du quart</label>
+        <select id="extract2-date"></select>
+      </div>
+      <div class="field">
+        <label>Quart</label>
+        <select id="extract2-quart"></select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract2">🔎 Isoler les non-conformités</button>
+      <div id="extract2PreviewHost"></div>
+      <div class="btn-row" id="extract2ExportRow" style="display:none;margin-top:10px;">
+        <button class="btn btn-ghost" id="btnExtract2PDF">📄 Exporter en PDF</button>
+        <button class="btn btn-ghost" id="btnExtract2Excel">📊 Exporter en Excel</button>
+        <button class="btn btn-ghost" id="btnExtract2PNG">📲 Partager en image</button>
+      </div>
+    </div>
   </section>
 
   <!-- ============ VIEW: SETTINGS / PARAMÈTRES ============ -->
@@ -2690,6 +2732,171 @@ function buildSynthesisHtml(){
   );
 }
 
+/* ===================== MODULES D'EXTRACTION AUTOMATIQUE (aucune ressaisie) =====================
+   Les deux modules ci-dessous ne font QUE lire les données déjà saisies dans
+   state.shiftControls (les rapports de contrôle par ligne). Les menus déroulants
+   Date/Quart sont remplis avec les seules valeurs réellement présentes dans les
+   données — on ne demande jamais à l'opérateur de retaper quoi que ce soit. */
+
+function distinctShiftDatesQuarts(){
+  var dates = [], quarts = [];
+  state.shiftControls.forEach(function(c){
+    if(dates.indexOf(c.date) === -1) dates.push(c.date);
+    if(quarts.indexOf(c.quart) === -1) quarts.push(c.quart);
+  });
+  dates.sort();
+  return {dates:dates, quarts:quarts};
+}
+
+function populateExtractFilters(dateSelId, quartSelId){
+  var dq = distinctShiftDatesQuarts();
+  var dateSel = $(dateSelId), quartSel = $(quartSelId);
+  if(!dateSel || !quartSel) return;
+  var curDate = dateSel.value, curQuart = quartSel.value;
+  dateSel.innerHTML = dq.dates.length
+    ? dq.dates.map(function(d){ return '<option value="'+d+'">'+dmy(d)+'</option>'; }).join("")
+    : '<option value="">— Aucun contrôle enregistré —</option>';
+  quartSel.innerHTML = dq.quarts.length
+    ? dq.quarts.map(function(q){ return '<option value="'+escapeHtml(q)+'">'+escapeHtml(q)+'</option>'; }).join("")
+    : '<option value="">—</option>';
+  // Conserve la sélection précédente si elle existe toujours, sinon prend la plus récente.
+  if(dq.dates.indexOf(curDate) !== -1) dateSel.value = curDate;
+  else dateSel.value = dq.dates[dq.dates.length-1] || "";
+  if(dq.quarts.indexOf(curQuart) !== -1) quartSel.value = curQuart;
+  else quartSel.value = dq.quarts[dq.quarts.length-1] || "";
+}
+
+function filterShiftControls(dateSel, quartSel){
+  return state.shiftControls.filter(function(c){
+    return c.date === dateSel && c.quart === quartSel;
+  });
+}
+
+/* ---- MODULE 1 : Synthèse produits et lots (traçabilité matières) ---- */
+function buildProduitsLotsReportHtml(dateSel, quartSel){
+  var rows = filterShiftControls(dateSel, quartSel);
+  var body = rows.length
+    ? rows.map(function(c){
+        return '<tr><td>'+escapeHtml(c.ligne)+'</td><td>'+escapeHtml(c.produit)+'</td>'+
+          '<td class="rcell-center">'+escapeHtml(c.format||"—")+'</td><td class="rcell-center">'+escapeHtml(c.lot||"—")+'</td></tr>';
+      }).join("")
+    : '<tr><td colspan="4" style="text-align:center;color:#888;font-style:italic;">Aucun contrôle enregistré pour cette date/quart.</td></tr>';
+  return (
+    '<div class="report-doc" id="extract1DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">📦 Synthèse produits et lots</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(dateSel))+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quartSel)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Lignes contrôlées</span><b>'+rows.length+'</b></div></div>'+
+      '</div>'+
+      '<table><tr><th>Machine / Ligne</th><th>Produit</th><th>Format</th><th>N° de lot</th></tr>'+body+'</table>'+
+      '<div class="rfoot"><span>Traçabilité matières — extraction automatique</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract1Preview(){
+  var host = $("#extract1PreviewHost");
+  if(!host) return;
+  var dateSel = $("#extract-date").value, quartSel = $("#extract-quart").value;
+  host.innerHTML = buildProduitsLotsReportHtml(dateSel, quartSel);
+  $("#extract1ExportRow").style.display = "flex";
+}
+
+function buildExtract1ExcelWorkbook(dateSel, quartSel){
+  var rows = filterShiftControls(dateSel, quartSel);
+  var sheet = rows.length ? rows.map(function(c){
+    return {"Machine / Ligne": c.ligne, "Produit": c.produit, "Format": c.format||"", "N° de lot": c.lot||""};
+  }) : [{"Machine / Ligne":"", "Produit":"", "Format":"", "N° de lot":"Aucun contrôle pour cette date/quart"}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Produits et lots");
+  return wb;
+}
+
+/* ---- MODULE 2 : Journal isolé des non-conformités ---- */
+function buildNCJournalReportHtml(dateSel, quartSel){
+  var controls = filterShiftControls(dateSel, quartSel);
+  var ncRows = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      ncRows.push('<tr>'+
+        '<td>'+escapeHtml(c.ligne)+'</td>'+
+        '<td>'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+' / '+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.cause||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+      '</tr>');
+    });
+  });
+  var body = ncRows.length
+    ? '<table><tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Traitée</th></tr>'+ncRows.join("")+'</table>'
+    : '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité détectée.</div>';
+  return (
+    '<div class="report-doc" id="extract2DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">🚨 Journal des non-conformités</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(dateSel))+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quartSel)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>NC détectées</span><b>'+ncRows.length+'</b></div></div>'+
+      '</div>'+
+      body+
+      '<div class="rfoot"><span>Journal isolé des anomalies — extraction automatique</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract2Preview(){
+  var host = $("#extract2PreviewHost");
+  if(!host) return;
+  var dateSel = $("#extract2-date").value, quartSel = $("#extract2-quart").value;
+  host.innerHTML = buildNCJournalReportHtml(dateSel, quartSel);
+  $("#extract2ExportRow").style.display = "flex";
+}
+
+function buildExtract2ExcelWorkbook(dateSel, quartSel){
+  var controls = filterShiftControls(dateSel, quartSel);
+  var sheet = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      sheet.push({
+        "Ligne": c.ligne, "Paramètre": p, "Description": d.description||"",
+        "Niveau": d.niveau||"", "Classe": d.classeDefaut||"",
+        "Cause": d.cause||"", "Action immédiate": d.actionImmediate||"",
+        "Traitée": d.ncTraitee||"Non"
+      });
+    });
+  });
+  if(!sheet.length) sheet.push({"Ligne":"", "Paramètre":"", "Description":"Aucune non-conformité détectée", "Niveau":"", "Classe":"", "Cause":"", "Action immédiate":"", "Traitée":""});
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Non-conformités");
+  return wb;
+}
+
+function exportExtractExcel(wb, filename){
+  if(isNativeApp() && window.Capacitor.Plugins.Filesystem){
+    var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+    saveDocumentToNativeStorage(base64, filename)
+      .then(function(){ toast("✔ Enregistré : Fichiers > Documents > "+filename); })
+      .catch(function(err){
+        console.error(err);
+        offerNativeSaveFallback(base64, filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      });
+  } else {
+    XLSX.writeFile(wb, filename);
+    toast("Export Excel généré ✔");
+  }
+}
+
 function renderSynthPreview(){
   var host = $("#synthPreviewHost");
   if(state.shiftControls.length === 0){
@@ -3644,7 +3851,11 @@ document.addEventListener("DOMContentLoaded", async function(){
   $all(".tab-btn").forEach(function(b){
     b.addEventListener("click", function(){
       showView(b.dataset.view);
-      if(b.dataset.view === "synth") renderSynthPreview();
+      if(b.dataset.view === "synth"){
+        renderSynthPreview();
+        populateExtractFilters("#extract-date", "#extract-quart");
+        populateExtractFilters("#extract2-date", "#extract2-quart");
+      }
       if(b.dataset.view === "settings") renderAllSettings();
     });
   });
@@ -3692,6 +3903,34 @@ document.addEventListener("DOMContentLoaded", async function(){
   });
 
   $("#btnBuildSynth").addEventListener("click", renderSynthPreview);
+
+  // Module 1 — Synthèse produits et lots du quart
+  $("#btnBuildExtract1").addEventListener("click", renderExtract1Preview);
+  $("#btnExtract1PDF").addEventListener("click", function(){
+    exportNode($("#extract1PreviewHost"), "pdf", "MIBEM_ProduitsLots_"+$("#extract-date").value);
+  });
+  $("#btnExtract1Excel").addEventListener("click", function(){
+    var wb = buildExtract1ExcelWorkbook($("#extract-date").value, $("#extract-quart").value);
+    exportExtractExcel(wb, "MIBEM_ProduitsLots_"+$("#extract-date").value+".xlsx");
+  });
+  $("#btnExtract1PNG").addEventListener("click", function(){
+    shareNode($("#extract1PreviewHost"), "MIBEM_ProduitsLots_"+$("#extract-date").value,
+      "Synthèse produits et lots — MIBEM COMPANY — "+$("#extract-quart").value, "png");
+  });
+
+  // Module 2 — Journal isolé des non-conformités
+  $("#btnBuildExtract2").addEventListener("click", renderExtract2Preview);
+  $("#btnExtract2PDF").addEventListener("click", function(){
+    exportNode($("#extract2PreviewHost"), "pdf", "MIBEM_JournalNC_"+$("#extract2-date").value);
+  });
+  $("#btnExtract2Excel").addEventListener("click", function(){
+    var wb = buildExtract2ExcelWorkbook($("#extract2-date").value, $("#extract2-quart").value);
+    exportExtractExcel(wb, "MIBEM_JournalNC_"+$("#extract2-date").value+".xlsx");
+  });
+  $("#btnExtract2PNG").addEventListener("click", function(){
+    shareNode($("#extract2PreviewHost"), "MIBEM_JournalNC_"+$("#extract2-date").value,
+      "Journal des non-conformités — MIBEM COMPANY — "+$("#extract2-quart").value, "png");
+  });
 
   $("#closeReportModal").addEventListener("click", function(){
     $("#reportModal").classList.remove("show");
