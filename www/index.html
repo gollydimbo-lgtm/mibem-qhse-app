@@ -520,8 +520,10 @@ main{
 
 /* Photo gallery — règle unique pour TOUTES les sections photo de l'application
    (Photos terrain, Photos de non-conformité, photo de fiche de synthèse) :
-   grille stricte de 4 vignettes par ligne, jamais coincées dans un tableau,
-   toujours avec leurs proportions d'origine préservées (object-fit:cover). */
+   grille stricte de 4 vignettes par ligne, jamais coincées dans un tableau.
+   object-fit:contain (et non cover) : la photo entière reste TOUJOURS visible,
+   sans recadrage ni déformation — important pour ne perdre aucun détail (étiquette,
+   marquage de lot, écran de balance) qui pourrait se trouver près du bord. */
 .report-doc .rgallery{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
@@ -532,7 +534,7 @@ main{
   border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
 }
 .report-doc .rgallery .rgallery-cell img{
-  width:100%;height:150px;min-height:150px;object-fit:cover;display:block;
+  width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;
 }
 .report-doc .rgallery .rgallery-cap{
   font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
@@ -2455,9 +2457,9 @@ function showView(name){
 
 /* ===================== RAPPORT UNITAIRE ===================== */
 /* Galerie de photos — règle unique de l'application : 4 miniatures larges par
-   ligne (150px min.), proportions d'origine toujours préservées (object-fit:cover),
-   jamais coincées dans une cellule de tableau. S'intègre en bas du rapport avec
-   le reste du bloc de validation (contrôleur + alertes). */
+   ligne (150px min.), object-fit:contain — la photo entière reste toujours visible,
+   jamais recadrée ni déformée — jamais coincées dans une cellule de tableau.
+   S'intègre en bas du rapport avec le reste du bloc de validation (contrôleur + alertes). */
 function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
   var cells = photos.map(function(p){
@@ -2466,7 +2468,7 @@ function renderPhotoGallery(photos){
     var src = (typeof p === "string") ? p : p.src;
     var caption = (typeof p === "string") ? "" : (p.caption || "");
     if(!src) return "";
-    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:cover;display:block;">'+
+    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
       (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
       '</div>';
   }).join("");
