@@ -520,18 +520,20 @@ main{
 
 /* Photo gallery — règle unique pour TOUTES les sections photo de l'application
    (Photos terrain, Photos de non-conformité, photo de fiche de synthèse) :
-   grille stricte de 4 vignettes par ligne, jamais coincées dans un tableau.
-   object-fit:contain (et non cover) : la photo entière reste TOUJOURS visible,
-   sans recadrage ni déformation — important pour ne perdre aucun détail (étiquette,
-   marquage de lot, écran de balance) qui pourrait se trouver près du bord. */
+   4 vignettes par ligne, jamais coincées dans un tableau. Flexbox plutôt que
+   CSS Grid : une ligne incomplète (ex. 5 photos → 4 + 1) ne réserve plus de
+   piste vide, ce qui évite le grand espace blanc et le saut de page artificiel
+   observés à l'export lorsque le nombre de photos n'est pas un multiple de 4. */
 .report-doc .rgallery{
-  display:grid;
-  grid-template-columns:repeat(4, 1fr);
+  display:flex;
+  flex-wrap:wrap;
   gap:10px;
   margin:8px auto 0;
 }
 .report-doc .rgallery .rgallery-cell{
   border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
+  width:calc(25% - 7.5px);
+  flex:0 0 auto;
 }
 .report-doc .rgallery .rgallery-cell img{
   width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;
@@ -566,6 +568,29 @@ main{
   float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--ink-soft);
 }
 .hint{font-size:.72rem;color:var(--ink-soft);margin-top:2px;}
+
+/* ===================== MENU D'ACTIONS UNIFIÉ (Exporter / Partager) =====================
+   Remplace les rangées de boutons individuels (image, PDF, Excel, partage, sync...)
+   par un seul bouton "Actions" qui déplie un menu épuré au clic. Utilisé partout dans
+   l'app (rapport de contrôle, synthèse, modules d'extraction) pour une zone inférieure
+   toujours compacte, quel que soit le nombre d'options disponibles. */
+.actions-menu{position:relative;width:100%;}
+.actions-menu-trigger{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;}
+.actions-menu-trigger .caret{font-size:.7em;transition:transform .15s ease;}
+.actions-menu-trigger.open .caret{transform:rotate(180deg);}
+.actions-menu-dropdown{
+  display:none;position:absolute;left:0;right:0;bottom:calc(100% + 8px);
+  background:#fff;border:1px solid #e4e0d4;border-radius:12px;
+  box-shadow:0 10px 30px rgba(30,20,10,.18);overflow:hidden;z-index:60;
+}
+.actions-menu-dropdown.open{display:block;}
+.actions-menu-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:13px 16px;border:none;background:#fff;font-size:.9rem;color:var(--ink);
+  cursor:pointer;border-bottom:1px solid #f0eee7;font-family:inherit;
+}
+.actions-menu-item:last-child{border-bottom:none;}
+.actions-menu-item:hover,.actions-menu-item:active{background:#f7f5ee;}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--dark);color:#fff;padding:10px 18px;border-radius:8px;
@@ -775,10 +800,13 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildExtract1">🔎 Extraire les produits et lots</button>
       <div id="extract1PreviewHost"></div>
-      <div class="btn-row" id="extract1ExportRow" style="display:none;margin-top:10px;">
-        <button class="btn btn-ghost" id="btnExtract1PDF">📄 Exporter en PDF</button>
-        <button class="btn btn-ghost" id="btnExtract1Excel">📊 Exporter en Excel</button>
-        <button class="btn btn-ghost" id="btnExtract1PNG">📲 Partager en image</button>
+      <div class="actions-menu" id="extract1ExportRow" style="display:none;margin-top:10px;">
+        <button class="btn btn-dark actions-menu-trigger" id="extract1ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="extract1ActionsDropdown">
+          <button class="actions-menu-item" id="btnExtract1PDF">📄 Exporter en PDF</button>
+          <button class="actions-menu-item" id="btnExtract1Excel">📊 Exporter en Excel</button>
+          <button class="actions-menu-item" id="btnExtract1PNG">📲 Partager en image</button>
+        </div>
       </div>
     </div>
 
@@ -796,10 +824,13 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildExtract2">🔎 Isoler les non-conformités</button>
       <div id="extract2PreviewHost"></div>
-      <div class="btn-row" id="extract2ExportRow" style="display:none;margin-top:10px;">
-        <button class="btn btn-ghost" id="btnExtract2PDF">📄 Exporter en PDF</button>
-        <button class="btn btn-ghost" id="btnExtract2Excel">📊 Exporter en Excel</button>
-        <button class="btn btn-ghost" id="btnExtract2PNG">📲 Partager en image</button>
+      <div class="actions-menu" id="extract2ExportRow" style="display:none;margin-top:10px;">
+        <button class="btn btn-dark actions-menu-trigger" id="extract2ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="extract2ActionsDropdown">
+          <button class="actions-menu-item" id="btnExtract2PDF">📄 Exporter en PDF</button>
+          <button class="actions-menu-item" id="btnExtract2Excel">📊 Exporter en Excel</button>
+          <button class="actions-menu-item" id="btnExtract2PNG">📲 Partager en image</button>
+        </div>
       </div>
     </div>
   </section>
@@ -891,10 +922,15 @@ main{
     <button class="close-x" id="closeReportModal">✕</button>
     <div id="reportDocHost"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary" id="btnExportPNG">🖼️ Exporter en image</button>
-      <button class="btn btn-dark" id="btnExportPDF">📄 Exporter en PDF</button>
-      <button class="btn btn-ghost" id="btnShareWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>
-      <button class="btn btn-ghost" id="btnShareImg">📤 Partager l'image</button>
+      <div class="actions-menu">
+        <button class="btn btn-dark actions-menu-trigger" id="reportActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="reportActionsDropdown">
+          <button class="actions-menu-item" id="btnExportPNG">🖼️ Exporter en image</button>
+          <button class="actions-menu-item" id="btnExportPDF">📄 Exporter en PDF</button>
+          <button class="actions-menu-item" id="btnShareWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>
+          <button class="actions-menu-item" id="btnShareImg">📤 Partager l'image</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2805,7 +2841,7 @@ function renderExtract1Preview(){
   if(!host) return;
   var dateSel = $("#extract-date").value, quartSel = $("#extract-quart").value;
   host.innerHTML = buildProduitsLotsReportHtml(dateSel, quartSel);
-  $("#extract1ExportRow").style.display = "flex";
+  $("#extract1ExportRow").style.display = "block";
 }
 
 function buildExtract1ExcelWorkbook(dateSel, quartSel){
@@ -2861,7 +2897,7 @@ function renderExtract2Preview(){
   if(!host) return;
   var dateSel = $("#extract2-date").value, quartSel = $("#extract2-quart").value;
   host.innerHTML = buildNCJournalReportHtml(dateSel, quartSel);
-  $("#extract2ExportRow").style.display = "flex";
+  $("#extract2ExportRow").style.display = "block";
 }
 
 function buildExtract2ExcelWorkbook(dateSel, quartSel){
@@ -2906,14 +2942,19 @@ function renderSynthPreview(){
     return;
   }
   host.innerHTML = '<div class="card" style="padding:0;overflow:hidden;"><div id="synthDocWrap" style="padding:16px;">'+buildSynthesisHtml()+'</div>'+
-    '<div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap;">'+
-      '<button class="btn btn-primary" id="btnSynthPNG">🖼️ Exporter en image</button>'+
-      '<button class="btn btn-dark" id="btnSynthPDF">📄 Exporter en PDF</button>'+
-      '<button class="btn btn-ghost" id="btnSynthWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>'+
-      '<button class="btn btn-ghost" id="btnSynthShareImg">📤 Partager l\'image</button>'+
-      '<button class="btn btn-dark" id="btnSynthXLSX">📊 Exporter en Excel</button>'+
-      '<button class="btn btn-ghost" id="btnSynthShareXLSX">📤 Partager l\'Excel</button>'+
-      '<button class="btn btn-primary" id="btnSynthSync">🔄 Synchroniser vers le tableau de bord</button>'+
+    '<div style="padding:0 16px 16px;">'+
+      '<div class="actions-menu">'+
+        '<button class="btn btn-dark actions-menu-trigger" id="synthActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>'+
+        '<div class="actions-menu-dropdown" id="synthActionsDropdown">'+
+          '<button class="actions-menu-item" id="btnSynthPNG">🖼️ Exporter en image</button>'+
+          '<button class="actions-menu-item" id="btnSynthPDF">📄 Exporter en PDF</button>'+
+          '<button class="actions-menu-item" id="btnSynthWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>'+
+          '<button class="actions-menu-item" id="btnSynthShareImg">📤 Partager l\'image</button>'+
+          '<button class="actions-menu-item" id="btnSynthXLSX">📊 Exporter en Excel</button>'+
+          '<button class="actions-menu-item" id="btnSynthShareXLSX">📤 Partager l\'Excel</button>'+
+          '<button class="actions-menu-item" id="btnSynthSync">🔄 Synchroniser vers le tableau de bord</button>'+
+        '</div>'+
+      '</div>'+
     '</div></div>';
   $("#btnSynthPNG").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "png", "MIBEM_Synthese_"+todayISO()); });
   $("#btnSynthPDF").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "pdf", "MIBEM_Synthese_"+todayISO()); });
@@ -2926,10 +2967,34 @@ function renderSynthPreview(){
   $("#btnSynthXLSX").addEventListener("click", exportShiftToExcel);
   $("#btnSynthShareXLSX").addEventListener("click", function(){ shareShiftExcel(buildSynthesisCaption()); });
   $("#btnSynthSync").addEventListener("click", function(){ syncToGoogleSheets(true); });
+  wireActionsMenu("#synthActionsTrigger", "#synthActionsDropdown");
 }
 
 /* ===================== EXPORT PNG / PDF / PARTAGE ===================== */
 /* ===================== UTILITAIRES NATIFS (Galerie photo + Documents Android) ===================== */
+/* ===================== MENU D'ACTIONS UNIFIÉ (générique, réutilisé partout) ===================== */
+function wireActionsMenu(triggerId, dropdownId){
+  var trigger = $(triggerId), dropdown = $(dropdownId);
+  if(!trigger || !dropdown) return;
+  trigger.addEventListener("click", function(e){
+    e.stopPropagation();
+    var wasOpen = dropdown.classList.contains("open");
+    $all(".actions-menu-dropdown").forEach(function(d){ d.classList.remove("open"); });
+    $all(".actions-menu-trigger").forEach(function(t){ t.classList.remove("open"); });
+    if(!wasOpen){ dropdown.classList.add("open"); trigger.classList.add("open"); }
+  });
+  dropdown.addEventListener("click", function(e){
+    if(e.target.closest(".actions-menu-item")){
+      dropdown.classList.remove("open");
+      trigger.classList.remove("open");
+    }
+  });
+}
+document.addEventListener("click", function(){
+  $all(".actions-menu-dropdown").forEach(function(d){ d.classList.remove("open"); });
+  $all(".actions-menu-trigger").forEach(function(t){ t.classList.remove("open"); });
+});
+
 function isNativeApp(){
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
@@ -3933,6 +3998,8 @@ document.addEventListener("DOMContentLoaded", async function(){
     shareNode($("#extract2PreviewHost"), "MIBEM_JournalNC_"+$("#extract2-date").value,
       "Journal des non-conformités — MIBEM COMPANY — "+$("#extract2-quart").value, "png");
   });
+  wireActionsMenu("#extract1ActionsTrigger", "#extract1ActionsDropdown");
+  wireActionsMenu("#extract2ActionsTrigger", "#extract2ActionsDropdown");
 
   $("#closeReportModal").addEventListener("click", function(){
     $("#reportModal").classList.remove("show");
@@ -3949,6 +4016,7 @@ document.addEventListener("DOMContentLoaded", async function(){
   $("#btnShareImg").addEventListener("click", function(){
     shareNode($("#reportDocHost"), "MIBEM_Controle", buildControlCaption(currentReportCtrl), "png");
   });
+  wireActionsMenu("#reportActionsTrigger", "#reportActionsDropdown");
  }catch(initErr){
   console.error("Erreur au démarrage de l'application :", initErr);
   try{ toast("Une erreur est survenue au démarrage — rechargez l'application."); }catch(e2){}
