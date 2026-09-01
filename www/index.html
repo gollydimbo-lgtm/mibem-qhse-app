@@ -3098,84 +3098,41 @@ function buildPdfFromNode(node){
   var maxH = pageH - margin*2;
 
   var contentRoot = node.querySelector(".report-doc") || node;
-  var children = Array.prototype.slice.call(contentRoot.children);
 
-  // Deux groupes seulement : "head" (en-tête + tous les tableaux — reste TOUJOURS
-  // intact, jamais mélangé au bloc suivant) et "footer" (photos terrain + contrôleur —
-  // seul bloc autorisé à passer sur une deuxième page si la place manque).
-  var headNodes = [];
-  var footerNode = null;
-  children.forEach(function(child){
-    if(child.classList && child.classList.contains("rfooter-block")){
-      footerNode = child;
-    } else {
-      headNodes.push(child);
-    }
-  });
+  // Capture UNIQUE et continue de tout le rapport (au lieu de deux captures séparées
+  // en-tête/photos) : mesurer chaque bloc isolément s'est révélé peu fiable et
+  // laissait de grandes zones blanches avant un saut de page inutile. Une seule
+  // image, découpée en pages successives qui se remplissent entièrement, garantit
+  // qu'aucun espace n'est jamais gaspillé.
+  var wrapper = document.createElement("div");
+  wrapper.className = contentRoot.className;
+  wrapper.style.position = "fixed";
+  wrapper.style.left = "-99999px";
+  wrapper.style.top = "0";
+  wrapper.style.width = EXPORT_WIDTH_PX + "px";
+  wrapper.style.background = "#ffffff";
+  wrapper.appendChild(contentRoot.cloneNode(true));
+  document.body.appendChild(wrapper);
 
-  function renderNodesToCanvas(nodes){
-    var wrapper = document.createElement("div");
-    wrapper.className = contentRoot.className;
-    wrapper.style.position = "fixed";
-    wrapper.style.left = "-99999px";
-    wrapper.style.top = "0";
-    wrapper.style.width = EXPORT_WIDTH_PX + "px";
-    wrapper.style.background = "#ffffff";
-    nodes.forEach(function(n){ wrapper.appendChild(n.cloneNode(true)); });
-    document.body.appendChild(wrapper);
-    return html2canvas(wrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
-      document.body.removeChild(wrapper);
-      return canvas;
-    });
-  }
-
-  // yCursor : position verticale libre sur la page courante après le dernier bloc posé
-  // (null = rien encore posé sur cette page, càd. une nouvelle page est nécessaire).
-  var yCursor = null;
-
-  function placeCanvasFlowing(canvas){
+  return html2canvas(wrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    document.body.removeChild(wrapper);
     var imgW = maxW;
-    var imgH = imgW * canvas.height / canvas.width;
-    if(imgH <= maxH){
-      // Le bloc tient sur une seule page : le placer à la suite du contenu déjà posé
-      // s'il reste assez de place, sinon démarrer une nouvelle page.
-      if(yCursor === null || yCursor + imgH > margin + maxH){
-        if(yCursor !== null) pdf.addPage();
-        yCursor = margin;
-      }
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, yCursor, imgW, imgH);
-      yCursor += imgH;
-    } else {
-      // Le bloc dépasse une page entière : le découper proprement page par page.
-      var ratio = canvas.width / imgW;
-      var pageCanvasHeight = maxH * ratio;
-      var offset = 0;
-      while(offset < canvas.height){
-        var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
-        var sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceH;
-        var ctx = sliceCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        if(yCursor !== null) pdf.addPage();
-        pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
-        yCursor = margin + sliceH/ratio;
-        offset += sliceH;
-      }
+    var ratio = canvas.width / imgW;
+    var pageCanvasHeight = maxH * ratio;
+    var offset = 0;
+    var firstPage = true;
+    while(offset < canvas.height){
+      var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
+      var sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceH;
+      var ctx = sliceCanvas.getContext("2d");
+      ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(!firstPage) pdf.addPage();
+      firstPage = false;
+      pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
+      offset += sliceH;
     }
-  }
-
-  var chain = Promise.resolve();
-  if(headNodes.length){
-    chain = chain.then(function(){ return renderNodesToCanvas(headNodes); })
-      .then(function(canvas){ placeCanvasFlowing(canvas); });
-  }
-  if(footerNode){
-    chain = chain.then(function(){ return renderNodesToCanvas([footerNode]); })
-      .then(function(canvas){ placeCanvasFlowing(canvas); });
-  }
-
-  return chain.then(function(){
     var dataUri = pdf.output("datauristring");
     var base64 = dataUri.substring(dataUri.indexOf(",")+1);
     var blob = pdf.output("blob");
