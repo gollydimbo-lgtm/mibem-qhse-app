@@ -3096,6 +3096,7 @@ function buildPdfFromNode(node){
   var margin = 20;
   var maxW = pageW - margin*2;
   var maxH = pageH - margin*2;
+  var SCALE = 3;
 
   var contentRoot = node.querySelector(".report-doc") || node;
 
@@ -3114,13 +3115,35 @@ function buildPdfFromNode(node){
   wrapper.appendChild(contentRoot.cloneNode(true));
   document.body.appendChild(wrapper);
 
-  return html2canvas(wrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+  // Avant la capture : repérer chaque photo (position + source d'origine en pleine
+  // résolution) puis la "vider" dans le clone (même taille, mais sans pixels à
+  // rasteriser). html2canvas ne capture ainsi que du texte/tableaux — beaucoup plus
+  // léger et fiable — et les photos sont réinsérées après coup en qualité native :
+  // c'est ce qui corrige à la fois le flou des images transférées et les échecs
+  // occasionnels de génération sur les rapports avec beaucoup de photos.
+  var wrapperRect = wrapper.getBoundingClientRect();
+  var photoCells = [];
+  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery-cell img"), function(img){
+    if(!img.src) return;
+    var r = img.getBoundingClientRect();
+    photoCells.push({
+      src: img.src,
+      top: r.top - wrapperRect.top,
+      left: r.left - wrapperRect.left,
+      width: r.width,
+      height: r.height
+    });
+    img.removeAttribute("src"); img.style.visibility = "hidden";
+  });
+
+  return html2canvas(wrapper, {scale:SCALE, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
     document.body.removeChild(wrapper);
     var imgW = maxW;
     var ratio = canvas.width / imgW;
     var pageCanvasHeight = maxH * ratio;
     var offset = 0;
     var firstPage = true;
+    var pageCount = 0;
     while(offset < canvas.height){
       var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
       var sliceCanvas = document.createElement("canvas");
@@ -3130,9 +3153,31 @@ function buildPdfFromNode(node){
       ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
       if(!firstPage) pdf.addPage();
       firstPage = false;
+      pageCount++;
       pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
       offset += sliceH;
     }
+
+    // Deuxième passe : replacer chaque photo en PLEINE résolution d'origine, à
+    // l'endroit exact (et sur la bonne page) où se trouvait son emplacement vide.
+    photoCells.forEach(function(cell){
+      try{
+        var canvasTop = cell.top * SCALE;
+        var canvasLeft = cell.left * SCALE;
+        var canvasW = cell.width * SCALE;
+        var canvasH = cell.height * SCALE;
+        var pageIndex = Math.min(pageCount-1, Math.max(0, Math.floor(canvasTop / pageCanvasHeight)));
+        var withinPageTop = canvasTop - pageIndex*pageCanvasHeight;
+        var pdfX = margin + canvasLeft/ratio;
+        var pdfY = margin + withinPageTop/ratio;
+        var pdfW = canvasW/ratio;
+        var pdfH = canvasH/ratio;
+        var fmt = cell.src.indexOf("image/png") !== -1 ? "PNG" : "JPEG";
+        pdf.setPage(pageIndex+1);
+        pdf.addImage(cell.src, fmt, pdfX, pdfY, pdfW, pdfH, undefined, "FAST");
+      }catch(err){ console.error("Erreur insertion photo PDF :", err); }
+    });
+
     var dataUri = pdf.output("datauristring");
     var base64 = dataUri.substring(dataUri.indexOf(",")+1);
     var blob = pdf.output("blob");
@@ -3140,11 +3185,47 @@ function buildPdfFromNode(node){
   });
 }
 
+/* Capture un rapport en canvas, en réinsérant les photos en pleine résolution
+   d'origine à leur emplacement exact (même logique que buildPdfFromNode, mais pour
+   un aplat unique — pas de découpe en pages). Corrige le flou des exports image. */
+function renderReportCanvasSharp(wrapper){
+  var wrapperRect = wrapper.getBoundingClientRect();
+  var SCALE = 3;
+  var photoCells = [];
+  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery-cell img"), function(img){
+    if(!img.src) return;
+    var r = img.getBoundingClientRect();
+    photoCells.push({
+      src: img.src,
+      top: (r.top - wrapperRect.top) * SCALE,
+      left: (r.left - wrapperRect.left) * SCALE,
+      width: r.width * SCALE,
+      height: r.height * SCALE
+    });
+    img.removeAttribute("src"); img.style.visibility = "hidden";
+  });
+
+  return html2canvas(wrapper, {scale:SCALE, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    var ctx = canvas.getContext("2d");
+    return Promise.all(photoCells.map(function(cell){
+      return new Promise(function(resolve){
+        var im = new Image();
+        im.onload = function(){
+          try{ ctx.drawImage(im, cell.left, cell.top, cell.width, cell.height); }catch(e){}
+          resolve();
+        };
+        im.onerror = resolve;
+        im.src = cell.src;
+      });
+    })).then(function(){ return canvas; });
+  });
+}
+
 function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    renderReportCanvasSharp(exportWrapper).then(function(canvas){
       document.body.removeChild(exportWrapper);
       var dataUrl = canvas.toDataURL("image/png");
       if(isNativeApp() && window.Capacitor.Plugins.Media){
@@ -3228,7 +3309,7 @@ function shareNode(node, filename, text, kind){
   if(kind === "png"){
     toast("Préparation de l'image...");
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    renderReportCanvasSharp(exportWrapper).then(function(canvas){
       document.body.removeChild(exportWrapper);
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
