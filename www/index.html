@@ -2133,7 +2133,7 @@ function renderNcBlocks(){
     var d = state.ncData[p];
     var block = document.createElement("div");
     block.className = "card nc-block";
-    var photosHtml = (d.photos||[]).map(function(p){ return '<img src="'+p.src+'">'; }).join("");
+    var photosHtml = (d.photos||[]).map(function(p){ return '<img src="'+(p.thumb||p.src)+'">'; }).join("");
     var clotureRow = d.ncTraitee === "Oui"
       ? '<input type="text" class="nc-cloture" data-p="'+escapeHtml(p)+'" value="'+escapeHtml(d.clotureDetails||"")+'" placeholder="Précisions : date / par qui ?" style="margin-top:8px;">'
       : '';
@@ -2262,7 +2262,7 @@ function renderPhotoGrid(hostEl, arr, onChange, large){
     var div = document.createElement("div");
     div.className = "photo-item";
     div.innerHTML =
-      '<img src="'+p.src+'">'+
+      '<img src="'+(p.thumb||p.src)+'">'+
       '<input type="text" class="pg-caption" data-idx="'+idx+'" placeholder="Légende" value="'+escapeHtml(p.caption)+'">'+
       '<button type="button" class="pg-del" data-idx="'+idx+'">🗑️ Retirer</button>';
     hostEl.appendChild(div);
@@ -2331,17 +2331,26 @@ function handlePhotoFilesInput(input, arr, onDone){
   if(!files.length) return;
   if(files.length > 1) toast("Traitement de "+files.length+" photos...");
   Promise.all(files.map(function(file){
-    return resizeImageDataUrl(file, 2200, 0.95).catch(function(){
+    // Deux versions générées à la capture : "src" en pleine résolution (conservée,
+    // pour un usage futur en plein écran) et "thumb" beaucoup plus légère, utilisée
+    // pour l'affichage en galerie dans les rapports. Recharger une image 2200px en
+    // mémoire pour chaque vignette d'une galerie (jusqu'à 4 par ligne) lors d'un export
+    // PDF/PNG a fait planter l'application sur certains téléphones Android (mémoire
+    // insuffisante pour le WebView) — la vignette légère élimine ce risque.
+    return Promise.all([
+      resizeImageDataUrl(file, 2200, 0.95),
+      resizeImageDataUrl(file, 700, 0.78)
+    ]).catch(function(){
       // Repli : si le redimensionnement échoue pour une raison quelconque,
-      // on garde la photo d'origine plutôt que de la perdre.
+      // on garde la photo d'origine plutôt que de la perdre (thumb = même image).
       return new Promise(function(resolve){
         var reader = new FileReader();
-        reader.onload = function(e){ resolve(e.target.result); };
+        reader.onload = function(e){ resolve([e.target.result, e.target.result]); };
         reader.readAsDataURL(file);
       });
     });
-  })).then(function(dataUrls){
-    dataUrls.forEach(function(src){ arr.push({src:src, caption:""}); });
+  })).then(function(results){
+    results.forEach(function(pair){ arr.push({src:pair[0], thumb:pair[1], caption:""}); });
     onDone();
     input.value = "";
   });
@@ -2551,9 +2560,13 @@ function showView(name){
 function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
   var cells = photos.map(function(p){
-    // Tolère les deux formats : objet {src,caption} (format actuel) ou chaîne brute
-    // (anciens contrôles enregistrés avant la correction de la liaison des photos NC).
-    var src = (typeof p === "string") ? p : p.src;
+    // Tolère les deux formats : objet {src,thumb,caption} (format actuel) ou chaîne
+    // brute (anciens contrôles enregistrés avant la correction de la liaison des
+    // photos NC). Utilise systématiquement la vignette légère "thumb" quand elle
+    // existe : c'est ce qui évite de recharger une image pleine résolution (jusqu'à
+    // 2200px) pour chaque miniature de la galerie au moment de l'export — la cause
+    // du plantage mémoire observé sur certains téléphones Android.
+    var src = (typeof p === "string") ? p : (p.thumb || p.src);
     var caption = (typeof p === "string") ? "" : (p.caption || "");
     if(!src) return "";
     return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
@@ -3402,7 +3415,7 @@ function buildPdfFromNode(node){
   // ne se recharge pas correctement sur certains téléphones.
   var wrapper = cloneForExport(node);
 
-  return html2canvas(wrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+  return html2canvas(wrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
     document.body.removeChild(wrapper);
     var imgW = maxW;
     var ratio = canvas.width / imgW;
@@ -3425,6 +3438,9 @@ function buildPdfFromNode(node){
     var base64 = dataUri.substring(dataUri.indexOf(",")+1);
     var blob = pdf.output("blob");
     return { blob: blob, base64: base64, dataUri: dataUri };
+  }).catch(function(err){
+    if(wrapper.parentNode) document.body.removeChild(wrapper);
+    throw err;
   });
 }
 
@@ -3432,7 +3448,7 @@ function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
       document.body.removeChild(exportWrapper);
       var dataUrl = canvas.toDataURL("image/png");
       if(isNativeApp() && window.Capacitor.Plugins.Media){
@@ -3446,7 +3462,11 @@ function exportNode(node, kind, filename){
         link.click();
         toast("Image exportée ✔");
       }
-    }).catch(function(err){ console.error(err); toast("Erreur lors de l'export."); });
+    }).catch(function(err){
+      console.error(err);
+      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
+      toast("Erreur lors de l'export.");
+    });
   } else {
     buildPdfFromNode(node).then(function(pdfResult){
       if(isNativeApp() && window.Capacitor.Plugins.Filesystem){
@@ -3516,14 +3536,18 @@ function shareNode(node, filename, text, kind){
   if(kind === "png"){
     toast("Préparation de l'image...");
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:3, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
       document.body.removeChild(exportWrapper);
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
           shareBlobOrDownload(base64, blob, filename+".png", "image/png", text, "image");
         });
       }, "image/png");
-    }).catch(function(err){ console.error(err); toast("Erreur lors de la préparation du partage."); });
+    }).catch(function(err){
+      console.error(err);
+      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
+      toast("Erreur lors de la préparation du partage.");
+    });
     return;
   }
   toast("Préparation du PDF (qualité maximale, non compressé par WhatsApp)...");
