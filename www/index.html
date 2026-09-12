@@ -833,6 +833,32 @@ main{
         </div>
       </div>
     </div>
+
+    <!-- ============ MODULE 3 : TENDANCE MULTI-QUARTS (récurrence dans le temps) ============ -->
+    <div class="card">
+      <h2>📈 Tendance multi-quarts (récurrence dans le temps)</h2>
+      <p class="hint" style="margin-top:-6px;">Détecte les défauts qui reviennent sur plusieurs quarts — signe d'une cause systémique (usure d'équipement, dérive process). Se construit automatiquement à chaque « Nouveau quart » démarré ; aucune ressaisie.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Fenêtre d'analyse</label>
+        <select id="extract3-window">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="all">Tout l'historique disponible</option>
+        </select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract3">🔎 Analyser la tendance</button>
+      <div id="extract3PreviewHost"></div>
+      <div class="actions-menu" id="extract3ExportRow" style="display:none;margin-top:10px;">
+        <button class="btn btn-dark actions-menu-trigger" id="extract3ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="extract3ActionsDropdown">
+          <button class="actions-menu-item" id="btnExtract3PDF">📄 Exporter en PDF</button>
+          <button class="actions-menu-item" id="btnExtract3Excel">📊 Exporter en Excel</button>
+          <button class="actions-menu-item" id="btnExtract3PNG">📲 Partager en image</button>
+          <button class="actions-menu-item" id="btnExtract3Reset" style="color:#b3261e;">🗑️ Réinitialiser l'historique de tendance</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ============ VIEW: SETTINGS / PARAMÈTRES ============ -->
@@ -1965,7 +1991,8 @@ function resetParamStatus(){
     if(state.paramStatus[p].status === "nc"){
       state.ncData[p] = oldNc[p] || {
         description:"", niveau: (state.catalog.niveaux[0]||"Faible"), defaut:"", quantite:"", classeDefaut:(state.catalog.classes[0]||"Mineure"),
-        actionImmediate:"", ncTraitee:"Non", clotureDetails:"", cause:"", photos:[]
+        actionImmediate:"", ncTraitee:"Non", clotureDetails:"", cause:"", photos:[],
+        actionPreventive:"", verifEfficacite:"À vérifier"
       };
     }
   });
@@ -2021,10 +2048,12 @@ function toggleParam(p){
       defaut:"",               // DEFAUTS
       quantite:"",             // (complément) quantité concernée
       classeDefaut:(state.catalog.classes[0]||"Mineure"), // CLASSE DU DEFAUTS
-      actionImmediate:"",     // ACTION IMMEDIAT
+      actionImmediate:"",     // ACTION IMMEDIAT (confinement)
       ncTraitee:"Non",         // NC TRAITEE
       clotureDetails:"",       // (complément) précisions si traitée
       cause:"",                 // CAUSES DE LA NON-CONFORMITE
+      actionPreventive:"",     // ACTION PRÉVENTIVE — évite la récurrence (boucle CAPA ISO 9001 §10.2)
+      verifEfficacite:"À vérifier", // VÉRIFICATION D'EFFICACITÉ — À vérifier / Efficace / Non efficace (récidive)
       photos:[]
     };
   }
@@ -2149,6 +2178,17 @@ function renderNcBlocks(){
         '<textarea class="nc-cause" data-p="'+escapeHtml(p)+'" placeholder="ex : usure sertisseuse... (Entrée = nouvelle puce 🚨)">'+escapeHtml(d.cause||"")+'</textarea>'+
       '</div>'+
 
+      '<div class="field"><label>9 · Action préventive (évite la récidive)</label>'+
+        '<textarea class="nc-action-prev" data-p="'+escapeHtml(p)+'" placeholder="ex : plan de maintenance préventive de la sertisseuse... (Entrée = nouvelle puce 🚨)">'+escapeHtml(d.actionPreventive||"")+'</textarea>'+
+      '</div>'+
+
+      '<div class="field"><label>10 · Vérification d\'efficacité</label>'+
+        '<select class="nc-verif-efficacite" data-p="'+escapeHtml(p)+'">'+
+          ["À vérifier","Efficace","Non efficace — récidive"].map(function(g){ return '<option '+(d.verifEfficacite===g?"selected":"")+'>'+g+'</option>'; }).join("")+
+        '</select>'+
+        '<p class="hint" style="margin-top:4px;">À contrôler au prochain quart : le défaut a-t-il réapparu malgré l\'action préventive ?</p>'+
+      '</div>'+
+
       '<div class="field"><label>Photo(s) jointe(s)</label>'+
         photoInputPairHtml("nc-photo", p)+
         '<div class="photo-preview">'+photosHtml+'</div>'+
@@ -2156,7 +2196,7 @@ function renderNcBlocks(){
     host.appendChild(block);
   });
 
-  $all(".nc-description,.nc-action,.nc-cause").forEach(attachBulletPrefix);
+  $all(".nc-description,.nc-action,.nc-cause,.nc-action-prev").forEach(attachBulletPrefix);
 
   $all(".nc-description").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].description = el.value; });
@@ -2191,6 +2231,15 @@ function renderNcBlocks(){
   });
   $all(".nc-cause").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].cause = el.value; });
+  });
+  $all(".nc-action-prev").forEach(function(el){
+    el.addEventListener("input", function(){ state.ncData[el.dataset.p].actionPreventive = el.value; });
+  });
+  $all(".nc-verif-efficacite").forEach(function(el){
+    el.addEventListener("change", function(){
+      state.ncData[el.dataset.p].verifEfficacite = el.value;
+      if(el.value.indexOf("Non efficace") === 0){ playAlertCritical(); toast("🚨 Action corrective jugée inefficace — récidive à traiter en priorité"); }
+    });
   });
   $all(".nc-photo-camera,.nc-photo-gallery").forEach(function(el){
     el.addEventListener("change", function(){
@@ -2570,12 +2619,19 @@ function buildSingleReportHtml(ctrl){
     }).join("");
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
       '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+ncRows+'</table>';
-    // Cause + clôture en texte libre juste en dessous.
+    // Cause, clôture et boucle CAPA (action préventive + vérification d'efficacité,
+    // conformément à ISO 9001 §10.2 : corriger, prévenir la récidive, vérifier que
+    // l'action a réellement fonctionné) en texte libre juste en dessous.
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
-      if(d.cause && d.cause.trim()){
-        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause)+
+      var hasContent = (d.cause && d.cause.trim()) || (d.actionPreventive && d.actionPreventive.trim());
+      if(hasContent){
+        var efficBadgeClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
+          (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
+        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
           (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
+          (d.actionPreventive && d.actionPreventive.trim() ? '<br><b>Action préventive :</b> '+escapeHtml(d.actionPreventive) : '')+
+          ' <b>· Efficacité :</b> <span class="rbadge '+efficBadgeClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span>'+
           '</div>';
       }
     });
@@ -2660,25 +2716,64 @@ function buildSynthesisHtml(){
 
   var totalNC = 0, totalMaj = 0, totalCrit = 0, totalMin = 0;
   var lignesStat = {};
+  var defautCount = {}; // Pareto : compte chaque défaut choisi (catalogue) sur le quart
+  var nonEfficaceCount = 0;
   controls.forEach(function(c){
     var ncKeys = Object.keys(c.nc);
     totalNC += ncKeys.length;
     ncKeys.forEach(function(k){
-      var g = c.nc[k].classeDefaut;
+      var d = c.nc[k];
+      var g = d.classeDefaut;
       if(g==="Majeure") totalMaj++; else if(g==="Critique") totalCrit++; else totalMin++;
+      var key = d.defaut || k;
+      defautCount[key] = (defautCount[key]||0) + 1;
+      if(d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) nonEfficaceCount++;
     });
     lignesStat[c.ligne] = lignesStat[c.ligne] || {n:0, nc:0};
     lignesStat[c.ligne].n++;
     lignesStat[c.ligne].nc += ncKeys.length;
   });
 
+  // KPI qualité : taux de conformité du quart (contrôles sans aucune NC / total).
+  var controlesConformes = controls.filter(function(c){ return Object.keys(c.nc).length === 0; }).length;
+  var tauxConformite = controls.length ? Math.round((controlesConformes/controls.length)*100) : 100;
+  var tauxClass = tauxConformite >= 95 ? "rbadge-ok" : (tauxConformite >= 80 ? "rbadge-warn" : "rbadge-nc");
+
+  // Détection automatique de récurrence (analyse statistique simple, façon Pareto) :
+  // un défaut qui revient 2 fois ou plus durant le même quart signale un problème
+  // systémique (usure d'un équipement, dérive process) plutôt qu'un incident isolé —
+  // c'est le principe même de l'amélioration continue ISO 9001. Aucune saisie
+  // supplémentaire : tout est déduit des non-conformités déjà enregistrées.
+  var recurrents = Object.keys(defautCount)
+    .map(function(k){ return {defaut:k, n:defautCount[k]}; })
+    .filter(function(x){ return x.n >= 2; })
+    .sort(function(a,b){ return b.n - a.n; });
+
   // Tableau des indicateurs : table-layout:auto + wrap (voir CSS) garantit que
   // "Majeures" et les autres libellés ne sont jamais coupés, quelle que soit
   // la largeur d'export.
   var indicatorsTable =
-    '<table><tr><th>Contrôles</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
-    '<tr><td class="rcell-center">'+controls.length+'</td><td class="rcell-center">'+totalNC+'</td>'+
+    '<table><tr><th>Contrôles</th><th>Taux conformité</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
+    '<tr><td class="rcell-center">'+controls.length+'</td>'+
+    '<td class="rcell-center"><span class="rbadge '+tauxClass+'">'+tauxConformite+' %</span></td>'+
+    '<td class="rcell-center">'+totalNC+'</td>'+
     '<td class="rcell-center">'+totalMin+'</td><td class="rcell-center">'+totalMaj+'</td><td class="rcell-center">'+totalCrit+'</td></tr></table>';
+
+  // Section innovation : alertes de récurrence (détection automatique de tendance).
+  var recurrenceHtml = "";
+  if(recurrents.length){
+    var recurrenceRows = recurrents.map(function(x){
+      var sev = x.n >= 3 ? "rbadge-nc" : "rbadge-warn";
+      return '<tr><td class="rwrap">'+escapeHtml(x.defaut)+'</td><td class="rcell-center">'+x.n+' fois</td>'+
+        '<td class="rcell-center"><span class="rbadge '+sev+'">'+(x.n>=3?"Systémique":"À surveiller")+'</span></td></tr>';
+    }).join("");
+    recurrenceHtml = '<h3 class="rsection">📈 Alertes de récurrence (détection automatique)</h3>'+
+      '<table><tr><th>Défaut</th><th>Occurrences</th><th>Sévérité</th></tr>'+recurrenceRows+'</table>'+
+      '<div class="ralert" style="border-left-color:#b3261e;">Ces défauts sont apparus plusieurs fois durant le même quart : il s\'agit probablement d\'une cause systémique (usure d\'équipement, dérive process) plutôt que d\'incidents isolés. Priorité recommandée pour l\'action préventive.</div>';
+  }
+  if(nonEfficaceCount > 0){
+    recurrenceHtml += '<div class="ralert" style="border-left-color:#b3261e;margin-top:6px;">⚠️ '+nonEfficaceCount+' action(s) corrective(s) jugée(s) NON EFFICACE(S) ce quart — la non-conformité correspondante a réapparu malgré le correctif. À traiter en priorité au prochain quart.</div>';
+  }
 
   var tableRows = controls.map(function(c){
     var w = worstStatus(c);
@@ -2701,17 +2796,20 @@ function buildSynthesisHtml(){
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
+      var efficClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
+        (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
       ncRows.push('<tr>'+
         '<td>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
         '<td>'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center"><span class="rbadge '+efficClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span></td>'+
       '</tr>');
     });
   });
   var ncDetailHtml = ncRows.length
-    ? '<table><tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th></tr>'+ncRows.join("")+'</table>'
+    ? '<table><tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th><th>Efficacité</th></tr>'+ncRows.join("")+'</table>'
     : '<p style="font-size:.8rem;color:#888;font-style:italic;">Aucune non-conformité détectée durant ce quart.</p>';
 
   // Points d'alerte — jamais de texte inventé : "Aucune alerte" explicite si rien n'a été saisi.
@@ -2751,6 +2849,7 @@ function buildSynthesisHtml(){
       '</div>'+
       '<h3 class="rsection">📊 Indicateurs du quart</h3>'+
       indicatorsTable+
+      recurrenceHtml+
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
       '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
@@ -2778,6 +2877,121 @@ function buildSynthesisHtml(){
    state.shiftControls (les rapports de contrôle par ligne). Les menus déroulants
    Date/Quart sont remplis avec les seules valeurs réellement présentes dans les
    données — on ne demande jamais à l'opérateur de retaper quoi que ce soit. */
+
+/* ===================== HISTORIQUE MULTI-QUARTS (tendance dans le temps) =====================
+   Le quart en cours (state.shiftControls) est effacé à chaque "Nouveau quart" — nécessaire
+   pour ne pas re-saisir, mais ça empêchait toute analyse de tendance au-delà d'un seul
+   quart. On archive donc, juste avant l'effacement, un résumé LÉGER (sans les photos —
+   uniquement les données utiles à la détection de récurrence) dans IndexedDB, avec purge
+   automatique au-delà de la fenêtre de rétention pour ne jamais grossir indéfiniment. */
+var HISTORY_KEY = "mibem_qhse_history_v1";
+var HISTORY_RETENTION_DAYS = 90;
+
+function loadShiftHistory(){
+  return idbGet(HISTORY_KEY).then(function(arr){ return arr || []; }).catch(function(){ return []; });
+}
+function saveShiftHistory(arr){
+  return idbSet(HISTORY_KEY, arr).catch(function(err){ console.error("Échec sauvegarde historique tendance :", err); });
+}
+
+/* Construit un résumé léger (sans photos) du quart pour l'archive de tendance. */
+function buildArchiveRecord(controls){
+  var ncList = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      ncList.push({
+        date:c.date, quart:c.quart, heure:c.heure, ligne:c.ligne, produit:c.produit, lot:c.lot,
+        parametre:p, defaut:d.defaut||p, classeDefaut:d.classeDefaut||"", niveau:d.niveau||"",
+        cause:d.cause||"", actionPreventive:d.actionPreventive||"",
+        verifEfficacite:d.verifEfficacite||"À vérifier", ncTraitee:d.ncTraitee||"Non"
+      });
+    });
+  });
+  return {
+    date: controls.length ? controls[0].date : todayISO(),
+    quart: controls.length ? controls[0].quart : getQuart(),
+    archivedAt: new Date().toISOString(),
+    totalControls: controls.length,
+    controlesConformes: controls.filter(function(c){ return Object.keys(c.nc).length===0; }).length,
+    nc: ncList
+  };
+}
+
+/* Archive le quart en cours dans l'historique, avec purge des entrées trop anciennes.
+   Ne fait rien si le quart est vide (rien à archiver). Retourne toujours une Promise
+   résolue, même en cas d'erreur, pour ne jamais bloquer le démarrage du nouveau quart. */
+function archiveCurrentShiftToHistory(){
+  if(!state.shiftControls.length) return Promise.resolve();
+  var record = buildArchiveRecord(state.shiftControls);
+  return loadShiftHistory().then(function(history){
+    history.push(record);
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - HISTORY_RETENTION_DAYS);
+    var cutoffISO = todayISOFromDate(cutoff);
+    history = history.filter(function(h){ return h.date >= cutoffISO; });
+    return saveShiftHistory(history);
+  }).catch(function(err){
+    console.error("Échec de l'archivage du quart dans l'historique de tendance :", err);
+  });
+}
+function todayISOFromDate(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+
+/* Calcule la récurrence des défauts sur une fenêtre glissante (historique archivé +
+   quart en cours, pas encore archivé). windowDays = 7 / 30 / 90 / "all". */
+function computeMultiShiftRecurrence(windowDays){
+  return loadShiftHistory().then(function(history){
+    var cutoffISO = null;
+    if(windowDays !== "all"){
+      var d = new Date();
+      d.setDate(d.getDate() - parseInt(windowDays,10));
+      cutoffISO = todayISOFromDate(d);
+    }
+    var ncEntries = [];
+    var shiftsInWindow = 0;
+    history.forEach(function(h){
+      if(!cutoffISO || h.date >= cutoffISO){
+        shiftsInWindow++;
+        ncEntries = ncEntries.concat(h.nc);
+      }
+    });
+    // Le quart en cours n'est pas encore archivé — on l'inclut quand même dans l'analyse.
+    if(state.shiftControls.length){
+      var curDate = state.shiftControls[0].date;
+      if(!cutoffISO || curDate >= cutoffISO){
+        shiftsInWindow++;
+        state.shiftControls.forEach(function(c){
+          Object.keys(c.nc).forEach(function(p){
+            var d2 = c.nc[p];
+            ncEntries.push({
+              date:c.date, quart:c.quart, heure:c.heure, ligne:c.ligne, produit:c.produit, lot:c.lot,
+              parametre:p, defaut:d2.defaut||p, classeDefaut:d2.classeDefaut||"", niveau:d2.niveau||"",
+              cause:d2.cause||"", actionPreventive:d2.actionPreventive||"",
+              verifEfficacite:d2.verifEfficacite||"À vérifier", ncTraitee:d2.ncTraitee||"Non"
+            });
+          });
+        });
+      }
+    }
+    var counts = {};
+    ncEntries.forEach(function(n){
+      var key = n.defaut || n.parametre;
+      if(!counts[key]) counts[key] = {n:0, dates:{}, lignes:{}};
+      counts[key].n++;
+      counts[key].dates[n.date] = true;
+      counts[key].lignes[n.ligne] = true;
+    });
+    var pareto = Object.keys(counts).map(function(k){
+      var c = counts[k];
+      return {
+        defaut:k, occurrences:c.n,
+        joursDistincts:Object.keys(c.dates).length,
+        lignesTouchees:Object.keys(c.lignes).join(", ")
+      };
+    }).sort(function(a,b){ return b.occurrences - a.occurrences; });
+    return {pareto:pareto, totalNC:ncEntries.length, shiftsAnalyses:shiftsInWindow, entries:ncEntries};
+  });
+}
 
 function distinctShiftDatesQuarts(){
   var dates = [], quarts = [];
@@ -2864,6 +3078,8 @@ function buildNCJournalReportHtml(dateSel, quartSel){
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
+      var efficClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
+        (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
       ncRows.push('<tr>'+
         '<td>'+escapeHtml(c.ligne)+'</td>'+
         '<td>'+escapeHtml(p)+'</td>'+
@@ -2871,12 +3087,14 @@ function buildNCJournalReportHtml(dateSel, quartSel){
         '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+' / '+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.cause||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionPreventive||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center"><span class="rbadge '+efficClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span></td>'+
       '</tr>');
     });
   });
   var body = ncRows.length
-    ? '<table><tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Traitée</th></tr>'+ncRows.join("")+'</table>'
+    ? '<table><tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Action préventive</th><th>Traitée</th><th>Efficacité</th></tr>'+ncRows.join("")+'</table>'
     : '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité détectée.</div>';
   return (
     '<div class="report-doc" id="extract2DocInner">'+
@@ -2913,11 +3131,12 @@ function buildExtract2ExcelWorkbook(dateSel, quartSel){
         "Ligne": c.ligne, "Paramètre": p, "Description": d.description||"",
         "Niveau": d.niveau||"", "Classe": d.classeDefaut||"",
         "Cause": d.cause||"", "Action immédiate": d.actionImmediate||"",
+        "Action préventive": d.actionPreventive||"", "Efficacité vérifiée": d.verifEfficacite||"À vérifier",
         "Traitée": d.ncTraitee||"Non"
       });
     });
   });
-  if(!sheet.length) sheet.push({"Ligne":"", "Paramètre":"", "Description":"Aucune non-conformité détectée", "Niveau":"", "Classe":"", "Cause":"", "Action immédiate":"", "Traitée":""});
+  if(!sheet.length) sheet.push({"Ligne":"", "Paramètre":"", "Description":"Aucune non-conformité détectée", "Niveau":"", "Classe":"", "Cause":"", "Action immédiate":"", "Action préventive":"", "Efficacité vérifiée":"", "Traitée":""});
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Non-conformités");
   return wb;
@@ -2936,6 +3155,75 @@ function exportExtractExcel(wb, filename){
     XLSX.writeFile(wb, filename);
     toast("Export Excel généré ✔");
   }
+}
+
+/* ---- MODULE 3 : Tendance multi-quarts (récurrence sur plusieurs jours) ---- */
+var WINDOW_LABELS = {"7":"7 derniers jours", "30":"30 derniers jours", "90":"90 derniers jours", "all":"Tout l'historique disponible"};
+
+function buildTrendReportHtml(windowDays, data){
+  var label = WINDOW_LABELS[windowDays] || windowDays;
+  var body;
+  if(!data.pareto.length){
+    body = '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité enregistrée sur cette période — '+
+      (data.shiftsAnalyses===0 ? "l'historique se construit à chaque nouveau quart démarré, reviens dans quelques jours." : "tous les quarts analysés étaient conformes.")+
+      '</div>';
+  } else {
+    var rows = data.pareto.map(function(x){
+      var sev = x.occurrences >= 5 ? "rbadge-nc" : (x.occurrences >= 3 ? "rbadge-warn" : "rbadge-ok");
+      var label2 = x.occurrences >= 5 ? "Critique — action structurelle requise" : (x.occurrences >= 3 ? "Systémique" : "À surveiller");
+      return '<tr><td class="rwrap">'+escapeHtml(x.defaut)+'</td>'+
+        '<td class="rcell-center">'+x.occurrences+'</td>'+
+        '<td class="rcell-center">'+x.joursDistincts+'</td>'+
+        '<td class="rwrap">'+escapeHtml(x.lignesTouchees)+'</td>'+
+        '<td class="rcell-center"><span class="rbadge '+sev+'">'+label2+'</span></td></tr>';
+    }).join("");
+    body = '<table><tr><th>Défaut</th><th>Occurrences</th><th>Jours touchés</th><th>Lignes concernées</th><th>Sévérité</th></tr>'+rows+'</table>'+
+      '<div class="ralert" style="border-left-color:#b3261e;margin-top:8px;">Un défaut qui revient sur plusieurs jours et plusieurs quarts signale une cause systémique (usure d\'équipement, dérive process) plutôt qu\'un incident isolé — priorité recommandée pour l\'action préventive et la maintenance.</div>';
+  }
+  return (
+    '<div class="report-doc" id="extract3DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">📈 Tendance multi-quarts</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Fenêtre</span><b>'+escapeHtml(label)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quarts analysés</span><b>'+data.shiftsAnalyses+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>NC totales</span><b>'+data.totalNC+'</b></div></div>'+
+      '</div>'+
+      body+
+      '<div class="rfoot"><span>Analyse de tendance — détection automatique de récurrence</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract3Preview(){
+  var host = $("#extract3PreviewHost");
+  if(!host) return;
+  var windowDays = $("#extract3-window").value;
+  host.innerHTML = '<p class="hint">Analyse en cours…</p>';
+  computeMultiShiftRecurrence(windowDays).then(function(data){
+    host.innerHTML = buildTrendReportHtml(windowDays, data);
+    $("#extract3ExportRow").style.display = "block";
+  }).catch(function(err){
+    console.error(err);
+    host.innerHTML = '<p class="hint">⚠️ Impossible de lire l\'historique de tendance sur cet appareil.</p>';
+  });
+}
+
+function buildExtract3ExcelWorkbook(data, windowDays){
+  var sheet = data.pareto.length ? data.pareto.map(function(x){
+    return {"Défaut": x.defaut, "Occurrences": x.occurrences, "Jours distincts touchés": x.joursDistincts, "Lignes concernées": x.lignesTouchees};
+  }) : [{"Défaut":"Aucune non-conformité sur cette période", "Occurrences":"", "Jours distincts touchés":"", "Lignes concernées":""}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Tendance ("+(WINDOW_LABELS[windowDays]||windowDays)+")");
+  var detailSheet = data.entries.map(function(n){
+    return {"Date": n.date, "Quart": n.quart, "Ligne": n.ligne, "Produit": n.produit, "Lot": n.lot,
+      "Paramètre": n.parametre, "Défaut": n.defaut, "Classe": n.classeDefaut, "Cause": n.cause,
+      "Action préventive": n.actionPreventive, "Efficacité": n.verifEfficacite, "Traitée": n.ncTraitee};
+  });
+  if(detailSheet.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailSheet), "Détail NC");
+  return wb;
 }
 
 function renderSynthPreview(){
@@ -3351,6 +3639,8 @@ function buildShiftExcelWorkbook(){
         "NC traitée": d.ncTraitee || "Non",
         "Précisions clôture": d.clotureDetails || "",
         "Causes de la non-conformité": d.cause || "",
+        "Action préventive": d.actionPreventive || "",
+        "Efficacité vérifiée": d.verifEfficacite || "À vérifier",
         "Nb photos jointes": (d.photos||[]).length,
         "Contrôleur": c.controleur
       });
@@ -3617,7 +3907,8 @@ function buildSyncPayload(){
         description: d.description||"", niveau: d.niveau||"", defaut: d.defaut||"",
         quantite: d.quantite||"", classeDefaut: d.classeDefaut||"",
         actionImmediate: d.actionImmediate||"", ncTraitee: d.ncTraitee||"Non",
-        cause: d.cause||"", controleur: c.controleur||""
+        cause: d.cause||"", actionPreventive: d.actionPreventive||"",
+        verifEfficacite: d.verifEfficacite||"À vérifier", controleur: c.controleur||""
       });
     });
   });
@@ -3917,12 +4208,17 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   $("#btnNewShift").addEventListener("click", function(){
     if(confirm("Démarrer un nouveau quart ? Tout l'historique actuel sera effacé (pensez à exporter la synthèse avant).")){
-      state.shiftControls = [];
-      state.synthPhotos = [];
-      renderHistory();
-      renderSynthPhotos();
-      updateBadges();
-      toast("Nouveau quart démarré.");
+      var resetShift = function(){
+        state.shiftControls = [];
+        state.synthPhotos = [];
+        renderHistory();
+        renderSynthPhotos();
+        updateBadges();
+        toast("Nouveau quart démarré. Historique de tendance mis à jour.");
+      };
+      // On archive d'abord le quart (pour l'analyse de tendance multi-quarts), puis on
+      // réinitialise — même si l'archivage échoue, le nouveau quart démarre quand même.
+      archiveCurrentShiftToHistory().then(resetShift, resetShift);
     }
   });
 
@@ -3957,6 +4253,32 @@ document.addEventListener("DOMContentLoaded", async function(){
   });
   wireActionsMenu("#extract1ActionsTrigger", "#extract1ActionsDropdown");
   wireActionsMenu("#extract2ActionsTrigger", "#extract2ActionsDropdown");
+
+  // Module 3 — Tendance multi-quarts
+  $("#btnBuildExtract3").addEventListener("click", renderExtract3Preview);
+  $("#btnExtract3PDF").addEventListener("click", function(){
+    exportNode($("#extract3PreviewHost"), "pdf", "MIBEM_Tendance_"+todayISO());
+  });
+  $("#btnExtract3Excel").addEventListener("click", function(){
+    var windowDays = $("#extract3-window").value;
+    computeMultiShiftRecurrence(windowDays).then(function(data){
+      var wb = buildExtract3ExcelWorkbook(data, windowDays);
+      exportExtractExcel(wb, "MIBEM_Tendance_"+todayISO()+".xlsx");
+    });
+  });
+  $("#btnExtract3PNG").addEventListener("click", function(){
+    shareNode($("#extract3PreviewHost"), "MIBEM_Tendance_"+todayISO(),
+      "Tendance multi-quarts — MIBEM COMPANY — "+(WINDOW_LABELS[$("#extract3-window").value]||""), "png");
+  });
+  $("#btnExtract3Reset").addEventListener("click", function(){
+    if(confirm("Réinitialiser tout l'historique de tendance multi-quarts ? Cette action est irréversible (le quart en cours n'est pas affecté).")){
+      saveShiftHistory([]).then(function(){
+        toast("Historique de tendance réinitialisé.");
+        renderExtract3Preview();
+      });
+    }
+  });
+  wireActionsMenu("#extract3ActionsTrigger", "#extract3ActionsDropdown");
 
   $("#closeReportModal").addEventListener("click", function(){
     $("#reportModal").classList.remove("show");
