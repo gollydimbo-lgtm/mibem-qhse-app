@@ -2238,7 +2238,10 @@ function renderSynthPhotos(){
 }
 
 /* Redimensionne une photo côté client avant stockage : conserve une très haute
-   qualité visuelle (jusqu'à 1920 px de long côté) tout en évitant les photos
+   qualité visuelle (jusqu'à 2200 px de long côté, JPEG qualité 0.95 — étiquettes,
+   marquages de lot et écrans de balance restent nets et lisibles, y compris après
+   la compression que WhatsApp applique à ses propres pièces jointes) tout en
+   évitant les photos
    brutes de smartphone (parfois 4000×3000 px / plusieurs Mo) qui surchargent
    le moteur de rendu des rapports (cause du flou / des blocages / des échecs
    silencieux de sauvegarde locale). */
@@ -2279,7 +2282,7 @@ function handlePhotoFilesInput(input, arr, onDone){
   if(!files.length) return;
   if(files.length > 1) toast("Traitement de "+files.length+" photos...");
   Promise.all(files.map(function(file){
-    return resizeImageDataUrl(file, 1920, 0.88).catch(function(){
+    return resizeImageDataUrl(file, 2200, 0.95).catch(function(){
       // Repli : si le redimensionnement échoue pour une raison quelconque,
       // on garde la photo d'origine plutôt que de la perdre.
       return new Promise(function(resolve){
