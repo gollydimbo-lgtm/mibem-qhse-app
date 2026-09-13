@@ -873,6 +873,13 @@ main{
     </div>
 
     <div class="card">
+      <h2>💾 Espace de stockage utilisé</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Les photos sont conservées en haute qualité sur cet appareil (quart en cours + historique de tendance). Surveille cet indicateur si tu accumules beaucoup de contrôles sans exporter.</p>
+      <div id="storageUsageResult"><p class="hint">Calcul en cours…</p></div>
+      <div class="btn-row"><button class="btn btn-ghost" id="btnRefreshStorage">🔄 Actualiser</button></div>
+    </div>
+
+    <div class="card">
       <h2>📊 Synchronisation tableau de bord (Google Sheets)</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Envoie automatiquement la synthèse de fin de quart (et le détail des non-conformités) vers un Google Sheets — voir le guide fourni pour la mise en place (5 minutes, gratuit).</p>
       <div class="field">
@@ -2468,7 +2475,14 @@ function worstStatus(ctrl){
   return worst;
 }
 
+var _savingControl = false;
 function saveControl(){
+  // Verrou anti-double-soumission : un double-tap accidentel (fréquent sur mobile)
+  // appelait deux fois cette fonction avant le premier rendu, générant deux
+  // contrôles distincts en doublon (chacun avec un id différent) — ce qui faussait
+  // silencieusement les statistiques (taux de conformité, tendances multi-quarts).
+  if(_savingControl) return;
+  _savingControl = true;
   try{
     if(!$("#f-machine").value || !$("#f-produit").value){
       toast("Merci de sélectionner une ligne et un produit.");
@@ -2485,6 +2499,8 @@ function saveControl(){
   }catch(err){
     console.error("Erreur lors de l'enregistrement du contrôle :", err);
     toast("⚠️ Erreur lors de l'enregistrement — le contrôle n'a peut-être pas été sauvegardé. Réessayez.");
+  }finally{
+    setTimeout(function(){ _savingControl = false; }, 600);
   }
 }
 
@@ -3862,6 +3878,36 @@ function renderMachinesEditor(){
   });
 }
 
+/* Estimation de l'espace de stockage utilisé (IndexedDB : quart en cours + historique
+   de tendance). navigator.storage.estimate() est largement supporté sur Android/Chrome
+   mais pas partout (ex. anciens WebView) — on gère l'absence proprement plutôt que de
+   planter ou d'afficher une erreur brute. */
+function renderStorageUsage(){
+  var host = $("#storageUsageResult");
+  if(!host) return;
+  if(!(navigator.storage && navigator.storage.estimate)){
+    host.innerHTML = '<p class="hint">Indicateur non disponible sur cet appareil/navigateur.</p>';
+    return;
+  }
+  navigator.storage.estimate().then(function(est){
+    var usedMB = ((est.usage||0)/1024/1024).toFixed(1);
+    var quotaMB = ((est.quota||0)/1024/1024).toFixed(0);
+    var pct = est.quota ? Math.min(100, Math.round((est.usage/est.quota)*100)) : 0;
+    var barClass = pct >= 85 ? "rbadge-nc" : (pct >= 60 ? "rbadge-warn" : "rbadge-ok");
+    host.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+        '<span>'+usedMB+' Mo utilisés sur '+quotaMB+' Mo disponibles</span>'+
+        '<span class="rbadge '+barClass+'" style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700;">'+pct+' %</span>'+
+      '</div>'+
+      '<div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;">'+
+        '<div style="background:'+(pct>=85?"#b3261e":pct>=60?"#8a6100":"#1d7a3c")+';height:100%;width:'+pct+'%;"></div>'+
+      '</div>'+
+      (pct >= 85 ? '<p class="hint" style="color:#b3261e;margin-top:6px;">⚠️ Espace bientôt saturé — exporte et démarre un nouveau quart pour libérer de la place.</p>' : '');
+  }).catch(function(){
+    host.innerHTML = '<p class="hint">Impossible de calculer l\'espace utilisé pour le moment.</p>';
+  });
+}
+
 function renderAllSettings(){
   renderGroupedEditor("#settingsProduits", "produits", "un produit");
   renderGroupedEditor("#settingsDefauts", "defauts", "un défaut");
@@ -4020,6 +4066,7 @@ function checkForUpdates(){
 
 function wireSettingsEvents(){
   $("#btnCheckUpdate").addEventListener("click", checkForUpdates);
+  $("#btnRefreshStorage").addEventListener("click", renderStorageUsage);
 
   if($("#syncUrlInput")) $("#syncUrlInput").value = loadSyncUrl();
   $("#btnSaveSyncUrl").addEventListener("click", function(){
@@ -4195,7 +4242,7 @@ document.addEventListener("DOMContentLoaded", async function(){
         populateExtractFilters("#extract-date", "#extract-quart");
         populateExtractFilters("#extract2-date", "#extract2-quart");
       }
-      if(b.dataset.view === "settings") renderAllSettings();
+      if(b.dataset.view === "settings"){ renderAllSettings(); renderStorageUsage(); }
     });
   });
 
