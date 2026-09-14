@@ -61,9 +61,9 @@ jobs:
         working-directory: electron-app
         run: npm install
 
-      - name: Compiler et publier l'exécutable Windows
+      - name: Compiler l'exécutable Windows (sans publication automatique)
         working-directory: electron-app
-        run: npx electron-builder --win --x64 --publish always
+        run: npx electron-builder --win --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -76,19 +76,19 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
 
-      - name: Ajouter l'APK Android à la même publication
-        shell: bash
-        run: |
-          TAG="v${{ steps.version.outputs.value }}"
-          if ls android-apk/*.apk >/dev/null 2>&1; then
-            gh release upload "$TAG" android-apk/*.apk --clobber
-            echo "APK ajouté à la publication $TAG."
-          else
-            echo "Aucun APK trouvé à joindre (le build Android a peut-être échoué) — la publication Windows reste disponible."
-          fi
+      - name: Publier la release GitHub avec tous les fichiers (Windows + Android)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: MIBEM QHSE v${{ steps.version.outputs.value }}
+          make_latest: true
+          files: |
+            electron-app/dist_electron/*.exe
+            electron-app/dist_electron/*.blockmap
+            electron-app/dist_electron/latest.yml
+            android-apk/*.apk
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publier aussi les fichiers comme artefacts (onglet Actions)
         uses: actions/upload-artifact@v4
