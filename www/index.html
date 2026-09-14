@@ -453,9 +453,9 @@ main{
   background:#fafaf6;
 }
 .report-doc .rmeta-grid .rmeta-col{display:flex;flex-direction:column;gap:3px;min-width:0;}
-.report-doc .rmeta-grid .rmeta-item{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}
-.report-doc .rmeta-grid .rmeta-item span{color:#777;white-space:nowrap;}
-.report-doc .rmeta-grid .rmeta-item b{text-align:right;white-space:nowrap;overflow-wrap:normal;}
+.report-doc .rmeta-grid .rmeta-item{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:1px 0;}
+.report-doc .rmeta-grid .rmeta-item span{color:#777;white-space:nowrap;flex-shrink:0;}
+.report-doc .rmeta-grid .rmeta-item b{text-align:right;white-space:normal;overflow-wrap:break-word;min-width:0;}
 
 .report-doc h3.rsection{
   font-size:.72rem;
@@ -475,7 +475,7 @@ main{
   border:1px solid #ddd;padding:8px 8px;text-align:left;line-height:1.4;
   white-space:nowrap;overflow-wrap:normal;word-break:normal;
 }
-.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;padding:9px 8px;}
+.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:normal;overflow-wrap:break-word;padding:9px 6px;line-height:1.25;}
 /* Réservé aux colonnes de texte libre (description, action immédiate, cause) où un
    retour à la ligne normal est acceptable et nécessaire — jamais lettre par lettre. */
 .report-doc table td.rwrap{white-space:normal;overflow-wrap:break-word;word-break:normal;}
