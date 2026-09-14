@@ -2613,6 +2613,15 @@ function statusBadge(st){
   return '<span class="rbadge '+cls+'">'+escapeHtml(STATUS_LABEL[st])+'</span>';
 }
 
+/* Badge d'efficacité CAPA : libellé court à l'affichage (colonnes étroites, sans
+   troncature possible) — la valeur complète reste inchangée dans les données et
+   dans les exports Excel, seul l'affichage en badge est raccourci. */
+function efficaciteBadge(v){
+  var cls = v === "Efficace" ? "rbadge-ok" : (v && v.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
+  var label = v === "Efficace" ? "Efficace" : (v && v.indexOf("Non efficace") === 0) ? "Non efficace" : "À vérifier";
+  return '<span class="rbadge '+cls+'">'+escapeHtml(label)+'</span>';
+}
+
 function buildSingleReportHtml(ctrl){
   var order = ctrl.paramOrder || Object.keys(ctrl.parametres);
 
@@ -2636,10 +2645,10 @@ function buildSingleReportHtml(ctrl){
       var d = ctrl.nc[p];
       var photos = (d.photos||[]).map(function(ph){ return (typeof ph === "string") ? ph : ph.src; }).filter(Boolean);
       return '<tr>'+
-        '<td>'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
-        '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+'</td>'+
-        '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.niveau||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.defaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
@@ -2647,7 +2656,15 @@ function buildSingleReportHtml(ctrl){
       '</tr>';
     }).join("");
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
-      '<table><tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+ncRows+'</table>';
+      '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:11%;"><col style="width:20%;"><col style="width:9%;">'+
+          '<col style="width:9%;"><col style="width:14%;"><col style="width:16%;">'+
+          '<col style="width:8%;"><col style="width:13%;">'+
+        '</colgroup>'+
+        '<tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+
+        ncRows+
+      '</table>';
     // Cause, clôture et boucle CAPA (action préventive + vérification d'efficacité,
     // conformément à ISO 9001 §10.2 : corriger, prévenir la récidive, vérifier que
     // l'action a réellement fonctionné) en texte libre juste en dessous.
@@ -2655,12 +2672,10 @@ function buildSingleReportHtml(ctrl){
       var d = ctrl.nc[p];
       var hasContent = (d.cause && d.cause.trim()) || (d.actionPreventive && d.actionPreventive.trim());
       if(hasContent){
-        var efficBadgeClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
-          (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
         ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
           (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
           (d.actionPreventive && d.actionPreventive.trim() ? '<br><b>Action préventive :</b> '+escapeHtml(d.actionPreventive) : '')+
-          ' <b>· Efficacité :</b> <span class="rbadge '+efficBadgeClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span>'+
+          ' <b>· Efficacité :</b> '+efficaciteBadge(d.verifEfficacite)+
           '</div>';
       }
     });
@@ -2825,20 +2840,25 @@ function buildSynthesisHtml(){
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
-      var efficClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
-        (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
       ncRows.push('<tr>'+
-        '<td>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
-        '<td>'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
-        '<td class="rcell-center">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
-        '<td class="rcell-center"><span class="rbadge '+efficClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span></td>'+
+        '<td class="rcell-center">'+efficaciteBadge(d.verifEfficacite)+'</td>'+
       '</tr>');
     });
   });
   var ncDetailHtml = ncRows.length
-    ? '<table><tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th><th>Efficacité</th></tr>'+ncRows.join("")+'</table>'
+    ? '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:17%;"><col style="width:14%;"><col style="width:27%;">'+
+          '<col style="width:12%;"><col style="width:12%;"><col style="width:18%;">'+
+        '</colgroup>'+
+        '<tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th><th>Efficacité</th></tr>'+
+        ncRows.join("")+
+      '</table>'
     : '<p style="font-size:.8rem;color:#888;font-style:italic;">Aucune non-conformité détectée durant ce quart.</p>';
 
   // Points d'alerte — jamais de texte inventé : "Aucune alerte" explicite si rien n'a été saisi.
@@ -3061,7 +3081,7 @@ function buildProduitsLotsReportHtml(dateSel, quartSel){
   var rows = filterShiftControls(dateSel, quartSel);
   var body = rows.length
     ? rows.map(function(c){
-        return '<tr><td>'+escapeHtml(c.ligne)+'</td><td>'+escapeHtml(c.produit)+'</td>'+
+        return '<tr><td class="rwrap">'+escapeHtml(c.ligne)+'</td><td class="rwrap">'+escapeHtml(c.produit)+'</td>'+
           '<td class="rcell-center">'+escapeHtml(c.format||"—")+'</td><td class="rcell-center">'+escapeHtml(c.lot||"—")+'</td></tr>';
       }).join("")
     : '<tr><td colspan="4" style="text-align:center;color:#888;font-style:italic;">Aucun contrôle enregistré pour cette date/quart.</td></tr>';
@@ -3076,7 +3096,10 @@ function buildProduitsLotsReportHtml(dateSel, quartSel){
         '<div class="rmeta-col"><div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quartSel)+'</b></div></div>'+
         '<div class="rmeta-col"><div class="rmeta-item"><span>Lignes contrôlées</span><b>'+rows.length+'</b></div></div>'+
       '</div>'+
-      '<table><tr><th>Machine / Ligne</th><th>Produit</th><th>Format</th><th>N° de lot</th></tr>'+body+'</table>'+
+      '<table style="table-layout:fixed;">'+
+        '<colgroup><col style="width:30%;"><col style="width:34%;"><col style="width:18%;"><col style="width:18%;"></colgroup>'+
+        '<tr><th>Machine / Ligne</th><th>Produit</th><th>Format</th><th>N° de lot</th></tr>'+body+
+      '</table>'+
       '<div class="rfoot"><span>Traçabilité matières — extraction automatique</span><span>MIBEM COMPANY — QHSE</span></div>'+
     '</div>'
   );
@@ -3107,23 +3130,29 @@ function buildNCJournalReportHtml(dateSel, quartSel){
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
-      var efficClass = d.verifEfficacite === "Efficace" ? "rbadge-ok" :
-        (d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
       ncRows.push('<tr>'+
-        '<td>'+escapeHtml(c.ligne)+'</td>'+
-        '<td>'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(c.ligne)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
-        '<td class="rcell-center">'+escapeHtml(d.niveau||"—")+' / '+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.niveau||"—")+' / '+escapeHtml(d.classeDefaut||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.cause||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.actionPreventive||"—")+'</td>'+
         '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
-        '<td class="rcell-center"><span class="rbadge '+efficClass+'">'+escapeHtml(d.verifEfficacite||"À vérifier")+'</span></td>'+
+        '<td class="rcell-center">'+efficaciteBadge(d.verifEfficacite)+'</td>'+
       '</tr>');
     });
   });
   var body = ncRows.length
-    ? '<table><tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Action préventive</th><th>Traitée</th><th>Efficacité</th></tr>'+ncRows.join("")+'</table>'
+    ? '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:10%;"><col style="width:10%;"><col style="width:16%;">'+
+          '<col style="width:8%;"><col style="width:13%;"><col style="width:13%;">'+
+          '<col style="width:13%;"><col style="width:7%;"><col style="width:10%;">'+
+        '</colgroup>'+
+        '<tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Action préventive</th><th>Traitée</th><th>Efficacité</th></tr>'+
+        ncRows.join("")+
+      '</table>'
     : '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité détectée.</div>';
   return (
     '<div class="report-doc" id="extract2DocInner">'+
@@ -3199,14 +3228,17 @@ function buildTrendReportHtml(windowDays, data){
   } else {
     var rows = data.pareto.map(function(x){
       var sev = x.occurrences >= 5 ? "rbadge-nc" : (x.occurrences >= 3 ? "rbadge-warn" : "rbadge-ok");
-      var label2 = x.occurrences >= 5 ? "Critique — action structurelle requise" : (x.occurrences >= 3 ? "Systémique" : "À surveiller");
+      var label2 = x.occurrences >= 5 ? "Critique" : (x.occurrences >= 3 ? "Systémique" : "À surveiller");
       return '<tr><td class="rwrap">'+escapeHtml(x.defaut)+'</td>'+
         '<td class="rcell-center">'+x.occurrences+'</td>'+
         '<td class="rcell-center">'+x.joursDistincts+'</td>'+
         '<td class="rwrap">'+escapeHtml(x.lignesTouchees)+'</td>'+
         '<td class="rcell-center"><span class="rbadge '+sev+'">'+label2+'</span></td></tr>';
     }).join("");
-    body = '<table><tr><th>Défaut</th><th>Occurrences</th><th>Jours touchés</th><th>Lignes concernées</th><th>Sévérité</th></tr>'+rows+'</table>'+
+    body = '<table style="table-layout:fixed;">'+
+        '<colgroup><col style="width:24%;"><col style="width:13%;"><col style="width:13%;"><col style="width:24%;"><col style="width:26%;"></colgroup>'+
+        '<tr><th>Défaut</th><th>Occurrences</th><th>Jours touchés</th><th>Lignes concernées</th><th>Sévérité</th></tr>'+rows+
+      '</table>'+
       '<div class="ralert" style="border-left-color:#b3261e;margin-top:8px;">Un défaut qui revient sur plusieurs jours et plusieurs quarts signale une cause systémique (usure d\'équipement, dérive process) plutôt qu\'un incident isolé — priorité recommandée pour l\'action préventive et la maintenance.</div>';
   }
   return (
