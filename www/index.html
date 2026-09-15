@@ -3456,32 +3456,60 @@ function buildPdfFromNode(node){
   var margin = 20;
   var maxW = pageW - margin*2;
   var maxH = pageH - margin*2;
+  var SCALE = 2;
 
   // Capture UNIQUE et continue de tout le rapport (photos incluses, agrandies par
-  // cloneForExport) : la solution la plus simple reste la plus fiable — pas de
-  // repositionnement après coup, donc pas de risque de zones vides si une image
-  // ne se recharge pas correctement sur certains téléphones.
+  // cloneForExport). Avant de lancer la capture, on mesure la position verticale de
+  // chaque bloc direct du rapport (en-tête, chaque tableau, chaque galerie de
+  // photos...) — ce sont les SEULES frontières où un saut de page est autorisé.
+  // Sans ça, une page pouvait couper une photo ou un tableau pile au milieu.
   var wrapper = cloneForExport(node);
+  var reportClone = wrapper.firstChild;
+  var wrapperTop = wrapper.getBoundingClientRect().top;
+  var blockBoundaries = Array.prototype.slice.call(reportClone.children).map(function(child){
+    var r = child.getBoundingClientRect();
+    return Math.round((r.bottom - wrapperTop) * SCALE);
+  });
+  // Sécurité supplémentaire : si une galerie à elle seule dépasse une page entière
+  // (beaucoup de photos), on ajoute aussi la frontière basse de chaque vignette —
+  // ainsi, même dans ce cas rare, la coupure tombe toujours entre deux rangées de
+  // photos, jamais au milieu d'une image.
+  Array.prototype.forEach.call(reportClone.querySelectorAll(".rgallery-cell"), function(cell){
+    var r = cell.getBoundingClientRect();
+    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
+  });
 
-  return html2canvas(wrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+  return html2canvas(wrapper, {scale:SCALE, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
     document.body.removeChild(wrapper);
     var imgW = maxW;
     var ratio = canvas.width / imgW;
     var pageCanvasHeight = maxH * ratio;
-    var offset = 0;
-    var firstPage = true;
-    while(offset < canvas.height){
-      var sliceH = Math.min(pageCanvasHeight, canvas.height - offset);
+
+    var pages = [];
+    var cursor = 0;
+    while(cursor < canvas.height){
+      var limit = cursor + pageCanvasHeight;
+      if(limit >= canvas.height){ pages.push({from:cursor, to:canvas.height}); break; }
+      // La plus grande frontière de bloc qui tient encore dans cette page.
+      var cut = 0;
+      blockBoundaries.forEach(function(b){ if(b > cursor && b <= limit) cut = Math.max(cut, b); });
+      if(!cut) cut = Math.floor(limit); // bloc plus grand qu'une page entière : dernier recours
+      pages.push({from:cursor, to:cut});
+      cursor = cut;
+    }
+
+    pages.forEach(function(p, i){
+      var sliceH = p.to - p.from;
+      if(sliceH <= 0) return;
       var sliceCanvas = document.createElement("canvas");
       sliceCanvas.width = canvas.width;
       sliceCanvas.height = sliceH;
       var ctx = sliceCanvas.getContext("2d");
-      ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      if(!firstPage) pdf.addPage();
-      firstPage = false;
+      ctx.drawImage(canvas, 0, p.from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(i>0) pdf.addPage();
       pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
-      offset += sliceH;
-    }
+    });
+
     var dataUri = pdf.output("datauristring");
     var base64 = dataUri.substring(dataUri.indexOf(",")+1);
     var blob = pdf.output("blob");
