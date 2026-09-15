@@ -3466,9 +3466,18 @@ function buildPdfFromNode(node){
   var wrapper = cloneForExport(node);
   var reportClone = wrapper.firstChild;
   var wrapperTop = wrapper.getBoundingClientRect().top;
-  var blockBoundaries = Array.prototype.slice.call(reportClone.children).map(function(child){
+  var blockBoundaries = [];
+  Array.prototype.forEach.call(reportClone.children, function(child){
+    // Un titre de section (h3) ne doit jamais devenir un point de coupure : ça
+    // laisserait le titre seul en bas d'une page, séparé du tableau ou de la
+    // galerie qu'il annonce juste en dessous (c'est ce qui créait le grand vide
+    // sous "PHOTOS DE LA NON-CONFORMITÉ"). Sa frontière est donc ignorée — la
+    // coupure se reporte automatiquement sur l'élément précédent, et le titre
+    // voyage toujours avec son contenu vers la page suivante si besoin.
+    var isHeading = child.tagName === "H3" && child.classList.contains("rsection");
+    if(isHeading) return;
     var r = child.getBoundingClientRect();
-    return Math.round((r.bottom - wrapperTop) * SCALE);
+    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
   });
   // Sécurité supplémentaire : si une galerie à elle seule dépasse une page entière
   // (beaucoup de photos), on ajoute aussi la frontière basse de chaque vignette —
