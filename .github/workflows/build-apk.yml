@@ -35,8 +35,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Installer le SDK Android
-        uses: android-actions/setup-android@v3
+      - name: Accepter les licences du SDK Android déjà présent sur la machine
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        continue-on-error: true
 
       - name: Synchroniser le projet Capacitor (copie www/ vers android/)
         run: npx cap sync android
