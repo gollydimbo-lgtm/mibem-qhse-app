@@ -542,6 +542,15 @@ main{
   font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+/* Variante grande — photo de la fiche de rapport du quart : 2 par ligne maximum
+   (souvent une seule), image nettement plus haute pour rester immédiatement
+   visible et lisible dès l'ouverture du rapport. */
+.report-doc .rgallery.rgallery-large{gap:12px;}
+.report-doc .rgallery .rgallery-cell-large{
+  width:calc(50% - 6px);
+  border-width:2px;border-color:var(--gold);box-shadow:0 2px 8px rgba(30,20,10,.1);
+}
+.report-doc .rgallery .rgallery-cell-large .rgallery-cap{font-size:.72rem;white-space:normal;padding:5px 6px;}
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
   background:#fff;border-top:1px solid var(--line);
@@ -568,6 +577,29 @@ main{
   float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--ink-soft);
 }
 .hint{font-size:.72rem;color:var(--ink-soft);margin-top:2px;}
+
+/* ===================== BULLE DE MESSAGE — SENSIBILISATION OPÉRATEURS =====================
+   Présente le message généré automatiquement comme une bulle de conversation
+   (façon WhatsApp) — reconnaissable immédiatement comme "un message à envoyer",
+   pas comme un rapport de plus. */
+.chat-bubble-wrap{display:flex;justify-content:flex-end;}
+.chat-bubble{
+  background:#dcf8c6;
+  border-radius:14px 14px 4px 14px;
+  padding:14px 16px;
+  max-width:100%;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);
+  font-size:.9rem;
+  line-height:1.55;
+  white-space:pre-wrap;
+  color:#1a1a1a;
+}
+.chat-bubble .cb-meta{
+  display:block;text-align:right;font-size:.68rem;color:#5a8a4a;margin-top:8px;
+}
+.chat-bubble-empty{
+  background:#f3f1ea;border-radius:10px;padding:14px 16px;color:var(--ink-soft);font-size:.85rem;font-style:italic;
+}
 
 /* ===================== MENU D'ACTIONS UNIFIÉ (Exporter / Partager) =====================
    Remplace les rangées de boutons individuels (image, PDF, Excel, partage, sync...)
@@ -648,6 +680,7 @@ main{
     <button class="tab-btn active" data-view="form">Nouveau contrôle</button>
     <button class="tab-btn" data-view="history">Historique <span class="tab-badge" id="histBadge" style="display:none">0</span></button>
     <button class="tab-btn" data-view="synth">Synthèse fin de quart</button>
+    <button class="tab-btn" data-view="awareness">📢 Sensibilisation</button>
     <button class="tab-btn" data-view="settings">⚙️ Paramètres</button>
   </div>
 </header>
@@ -856,6 +889,23 @@ main{
           <button class="actions-menu-item" id="btnExtract3Excel">📊 Exporter en Excel</button>
           <button class="actions-menu-item" id="btnExtract3PNG">📲 Partager en image</button>
           <button class="actions-menu-item" id="btnExtract3Reset" style="color:#b3261e;">🗑️ Réinitialiser l'historique de tendance</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: SENSIBILISATION OPÉRATEURS ============ -->
+  <section class="view" id="view-awareness">
+    <div class="card">
+      <h2>📢 Sensibilisation opérateurs</h2>
+      <p class="hint" style="margin-top:-6px;">Message généré automatiquement à partir des non-conformités du quart, des alertes et des points récurrents à surveiller — rien à rédiger, prêt à transmettre à l'équipe.</p>
+      <button class="btn btn-dark btn-block" id="btnBuildAwareness" style="margin-top:10px;">🔄 Générer le message</button>
+      <div id="awarenessPreviewHost" style="margin-top:14px;"></div>
+      <div class="actions-menu" id="awarenessExportRow" style="display:none;margin-top:12px;">
+        <button class="btn btn-dark actions-menu-trigger" id="awarenessActionsTrigger">📤 Transmettre <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="awarenessActionsDropdown">
+          <button class="actions-menu-item" id="btnAwarenessShareWA">📲 Partager sur WhatsApp / autre app</button>
+          <button class="actions-menu-item" id="btnAwarenessCopy">📋 Copier le texte</button>
         </div>
       </div>
     </div>
@@ -2593,6 +2643,26 @@ function renderPhotoGallery(photos){
   return '<div class="rgallery">'+cells+'</div>';
 }
 
+/* Variante "grande" — réservée à la photo de la fiche de rapport du quart (en
+   général 1 ou 2 photos, pas une galerie de preuves multiples) : image bien plus
+   haute (380px) et au maximum 2 par ligne, pour qu'elle soit immédiatement visible
+   et lisible à l'ouverture du rapport, au lieu d'être une simple vignette parmi
+   d'autres. Utilise toujours la version pleine résolution ("src") plutôt que la
+   vignette légère, puisqu'il y a très peu de photos ici — pas de risque mémoire. */
+function renderPhotoGalleryLarge(photos){
+  if(!photos || !photos.length) return "";
+  var cells = photos.map(function(p){
+    var src = (typeof p === "string") ? p : (p.src || p.thumb);
+    var caption = (typeof p === "string") ? "" : (p.caption || "");
+    if(!src) return "";
+    return '<div class="rgallery-cell rgallery-cell-large"><img src="'+src+'" style="width:100%;height:380px;min-height:380px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
+      (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
+      '</div>';
+  }).join("");
+  if(!cells) return "";
+  return '<div class="rgallery rgallery-large">'+cells+'</div>';
+}
+
 /* Légende de partage : simple et courte — type de rapport + ligne (le nom de la ligne
    inclut déjà le format/volume, ex. "Eurostar 9 – 35 cl"). */
 function buildControlCaption(ctrl){
@@ -2874,7 +2944,7 @@ function buildSynthesisHtml(){
   // apparaît ici — jamais les photos de contrôle terrain, produit ou défaut, qui
   // restent propres au rapport de contrôle individuel de chaque ligne.
   var synthPhotosHtml = (state.synthPhotos && state.synthPhotos.length)
-    ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGallery(state.synthPhotos)
+    ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGalleryLarge(state.synthPhotos)
     : "";
 
   return (
@@ -3287,6 +3357,81 @@ function buildExtract3ExcelWorkbook(data, windowDays){
   return wb;
 }
 
+/* ===================== SENSIBILISATION OPÉRATEURS (message automatique) =====================
+   Construit un message de sensibilisation prêt à transmettre, à partir des données
+   déjà saisies — aucune rédaction manuelle. Combine : les non-conformités du quart en
+   cours, les points d'alerte notés, et les défauts récurrents détectés sur les 7
+   derniers jours (mêmes données que le module Tendance) pour mettre en avant les
+   paramètres à surveiller en priorité, dans une logique préventive. */
+function buildAwarenessMessage(){
+  return computeMultiShiftRecurrence("7").then(function(trend){
+    var controls = state.shiftControls;
+    var ncEntries = [];
+    controls.forEach(function(c){
+      Object.keys(c.nc).forEach(function(p){
+        var d = c.nc[p];
+        ncEntries.push({ligne:c.ligne, parametre:p, defaut:d.defaut||p, classeDefaut:d.classeDefaut||""});
+      });
+    });
+    var alertesLines = [];
+    controls.forEach(function(c){ if(c.alertes && c.alertes.trim()) alertesLines.push(c.alertes.trim()); });
+
+    var recurrents = trend.pareto.filter(function(x){ return x.occurrences >= 2; }).slice(0, 5);
+
+    var lines = [];
+    lines.push("📢 *Message de sensibilisation qualité — MIBEM COMPANY*");
+    lines.push("🗓️ "+dmy(controls.length?controls[0].date:todayISO())+" · Quart "+(controls.length?controls[0].quart:getQuart()));
+    lines.push("");
+
+    if(ncEntries.length){
+      lines.push("⚠️ "+ncEntries.length+" non-conformité(s) détectée(s) ce quart :");
+      ncEntries.slice(0,8).forEach(function(n){
+        lines.push("• "+n.parametre+" ("+n.ligne+")"+(n.defaut && n.defaut!==n.parametre ? " — "+n.defaut : "")+(n.classeDefaut ? " ["+n.classeDefaut+"]" : ""));
+      });
+      lines.push("");
+    } else {
+      lines.push("✅ Aucune non-conformité détectée ce quart — excellent travail, continuons ainsi !");
+      lines.push("");
+    }
+
+    if(alertesLines.length){
+      lines.push("🚩 Points d'alerte signalés :");
+      alertesLines.forEach(function(a){ lines.push("• "+a); });
+      lines.push("");
+    }
+
+    if(recurrents.length){
+      lines.push("🔁 Paramètres à surveiller en priorité (récurrents ces 7 derniers jours) :");
+      recurrents.forEach(function(x){
+        lines.push("• "+x.defaut+" — déjà observé "+x.occurrences+" fois sur "+x.joursDistincts+" jour(s), lignes : "+x.lignesTouchees);
+      });
+      lines.push("");
+    }
+
+    lines.push("✅ Merci de rester vigilants sur ces points avant et pendant votre poste.");
+    lines.push("Chaque contrôle compte pour la qualité MIBEM ! 💪");
+
+    return lines.join("\n");
+  });
+}
+
+function renderAwarenessPreview(){
+  var host = $("#awarenessPreviewHost");
+  if(!host) return;
+  host.innerHTML = '<p class="hint">Génération en cours…</p>';
+  buildAwarenessMessage().then(function(text){
+    state.lastAwarenessMessage = text;
+    host.innerHTML =
+      '<div class="chat-bubble-wrap"><div class="chat-bubble">'+escapeHtml(text).replace(/\n/g,"<br>")+
+      '<span class="cb-meta">'+(new Date()).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+' ✓✓</span>'+
+      '</div></div>';
+    $("#awarenessExportRow").style.display = "block";
+  }).catch(function(err){
+    console.error(err);
+    host.innerHTML = '<div class="chat-bubble-empty">⚠️ Impossible de générer le message pour le moment.</div>';
+  });
+}
+
 function renderSynthPreview(){
   var host = $("#synthPreviewHost");
   if(state.shiftControls.length === 0){
@@ -3349,6 +3494,34 @@ document.addEventListener("click", function(){
 
 function isNativeApp(){
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+/* Partage un texte simple (pas de fichier) — utilisé pour le message de sensibilisation,
+   qui doit s'ouvrir directement dans WhatsApp comme un message prêt à envoyer, pas
+   comme une pièce jointe. */
+function shareTextMessage(text){
+  if(isNativeApp() && window.Capacitor.Plugins.Share){
+    window.Capacitor.Plugins.Share.share({ text: text, dialogTitle: "Transmettre à l'équipe" })
+      .catch(function(err){ console.error(err); toast("Erreur lors du partage."); });
+    return;
+  }
+  if(navigator.share){
+    navigator.share({ text: text }).catch(function(){});
+    return;
+  }
+  copyTextToClipboard(text);
+  toast("Partage direct indisponible ici — texte copié, colle-le dans WhatsApp.");
+}
+function copyTextToClipboard(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  var ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta);
+  return Promise.resolve();
 }
 
 function blobToBase64(blob){
@@ -4312,6 +4485,7 @@ document.addEventListener("DOMContentLoaded", async function(){
         populateExtractFilters("#extract2-date", "#extract2-quart");
       }
       if(b.dataset.view === "settings"){ renderAllSettings(); renderStorageUsage(); }
+      if(b.dataset.view === "awareness") renderAwarenessPreview();
     });
   });
 
@@ -4419,6 +4593,17 @@ document.addEventListener("DOMContentLoaded", async function(){
     }
   });
   wireActionsMenu("#extract3ActionsTrigger", "#extract3ActionsDropdown");
+
+  // Sensibilisation opérateurs
+  $("#btnBuildAwareness").addEventListener("click", renderAwarenessPreview);
+  $("#btnAwarenessShareWA").addEventListener("click", function(){
+    if(state.lastAwarenessMessage) shareTextMessage(state.lastAwarenessMessage);
+  });
+  $("#btnAwarenessCopy").addEventListener("click", function(){
+    if(!state.lastAwarenessMessage) return;
+    copyTextToClipboard(state.lastAwarenessMessage).then(function(){ toast("Texte copié ✔"); });
+  });
+  wireActionsMenu("#awarenessActionsTrigger", "#awarenessActionsDropdown");
 
   $("#closeReportModal").addEventListener("click", function(){
     $("#reportModal").classList.remove("show");
