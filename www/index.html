@@ -715,6 +715,10 @@ main{
         <label>Contrôleur</label>
         <input type="text" id="f-controleur" placeholder="Nom du contrôleur">
       </div>
+      <div class="field">
+        <label>Site</label>
+        <select id="f-site"></select>
+      </div>
     </div>
 
     <div class="card">
@@ -975,6 +979,13 @@ main{
       <h2>🏷️ Classes du défaut</h2>
       <div id="settingsClasses"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddClasse">+ Ajouter une classe</button></div>
+    </div>
+
+    <div class="card">
+      <h2>🏢 Sites</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Renseignez ici les sites de l'entreprise (ex : USINE BASSAM, USINE KOUMASSI). Chaque utilisateur choisit son site dans le formulaire de contrôle.</p>
+      <div id="settingsSites"></div>
+      <div class="btn-row"><button class="btn btn-ghost" id="btnAddSite">+ Ajouter un site</button></div>
     </div>
 
     <div class="card">
@@ -1690,6 +1701,7 @@ var DEFAULT_DEFAUTS = {
 
 var DEFAULT_NIVEAUX = ["Faible","Modéré","Élevé","Critique"];
 var DEFAULT_CLASSES = ["Mineure","Majeure","Critique"];
+var DEFAULT_SITES = ["USINE BASSAM","USINE KOUMASSI"];
 
 /* ===================== CATALOGUE MODIFIABLE (persisté localement) ===================== */
 var CATALOG_STORAGE_KEY = "mibem_qhse_catalog_v1";
@@ -1702,7 +1714,8 @@ function defaultCatalog(){
     produits: deepCopy(DEFAULT_PRODUITS),
     defauts: deepCopy(DEFAULT_DEFAUTS),
     niveaux: deepCopy(DEFAULT_NIVEAUX),
-    classes: deepCopy(DEFAULT_CLASSES)
+    classes: deepCopy(DEFAULT_CLASSES),
+    sites: deepCopy(DEFAULT_SITES)
   };
 }
 
@@ -1771,7 +1784,8 @@ function loadCatalog(){
       produits: parsed.produits || base.produits,
       defauts: parsed.defauts || base.defauts,
       niveaux: (parsed.niveaux && parsed.niveaux.length) ? parsed.niveaux : base.niveaux,
-      classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes
+      classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes,
+      sites: (parsed.sites && parsed.sites.length) ? parsed.sites : base.sites
     };
   }catch(e){
     return defaultCatalog();
@@ -2001,6 +2015,22 @@ function fillMachineSelect(){
     });
     sel.appendChild(og);
   });
+}
+var USER_SITE_KEY = "mibem_qhse_user_site_v1";
+function fillSiteSelect(){
+  var sel = $("#f-site");
+  if(!sel) return;
+  var current = sel.value || safeLocalStorageGet(USER_SITE_KEY) || "";
+  sel.innerHTML = "";
+  var sites = (state.catalog.sites && state.catalog.sites.length) ? state.catalog.sites : DEFAULT_SITES;
+  sites.forEach(function(s){
+    var o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  if(current && sites.indexOf(current) !== -1){
+    sel.value = current;
+  }
 }
 function fillProduitSelect(){
   var sel = $("#f-produit");
@@ -2482,6 +2512,7 @@ function readFormAsControl(){
     famille: produitOpt ? produitOpt.dataset.famille : "",
     lot: $("#f-lot").value,
     controleur: $("#f-controleur").value || "GOLLY",
+    site: $("#f-site") ? $("#f-site").value : "",
     parametres: parametres,
     paramOrder: activeList.filter(function(p){ return p !== TYPE_BOUTEILLE_PARAM; }),
     typeBouteille: hasTypeBouteille ? state.typeBouteille : null,
@@ -2497,6 +2528,8 @@ function loadControlIntoForm(ctrl){
   setQuart(ctrl.quart);
   $("#f-quart-custom").value = ["06h-14h","14h-22h","22h-06h"].indexOf(ctrl.quart)===-1 ? ctrl.quart : "";
   $("#f-controleur").value = ctrl.controleur;
+  fillSiteSelect();
+  if(ctrl.site && $("#f-site")) $("#f-site").value = ctrl.site;
   fillMachineSelect();
   fillProduitSelect();
   $("#f-machine").value = ctrl.ligne;
@@ -2805,7 +2838,7 @@ function buildSingleReportHtml(ctrl){
       '<div class="rfooter-block">'+
         '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
         photosHtml+
-        '<div class="rfoot"><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+        '<div class="rfoot"><span>Site : <b>'+escapeHtml(ctrl.site||"—")+'</b></span><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
       '</div>'+
     '</div>'
   );
@@ -3858,6 +3891,7 @@ function buildShiftExcelWorkbook(){
       "Date": dmy(c.date),
       "Quart": c.quart,
       "Heure": c.heure,
+      "Site": c.site || "",
       "Ligne / Machine": c.ligne,
       "Emballage": c.emballage,
       "Format": c.format,
@@ -3924,7 +3958,8 @@ function buildShiftExcelWorkbook(){
         "Action préventive": d.actionPreventive || "",
         "Efficacité vérifiée": d.verifEfficacite || "À vérifier",
         "Nb photos jointes": (d.photos||[]).length,
-        "Contrôleur": c.controleur
+        "Contrôleur": c.controleur,
+        "Site": c.site || ""
       });
     });
   });
@@ -3991,6 +4026,7 @@ function refreshDependentSelectsAfterCatalogChange(){
   var curProduit = $("#f-produit") ? $("#f-produit").value : "";
   fillMachineSelect();
   fillProduitSelect();
+  fillSiteSelect();
   if($("#f-machine")) $("#f-machine").value = curMachine;
   if($("#f-produit")) $("#f-produit").value = curProduit;
   renderNcBlocks();
@@ -4155,6 +4191,7 @@ function renderAllSettings(){
   renderGroupedEditor("#settingsDefauts", "defauts", "un défaut");
   renderFlatEditor("#settingsNiveaux", "niveaux");
   renderFlatEditor("#settingsClasses", "classes");
+  renderFlatEditor("#settingsSites", "sites");
   renderMachinesEditor();
 }
 
@@ -4359,6 +4396,18 @@ function wireSettingsEvents(){
     refreshDependentSelectsAfterCatalogChange();
   });
 
+  $("#btnAddSite").addEventListener("click", function(){
+    var name = prompt("Nom du nouveau site (ex : USINE BASSAM) :");
+    if(!name) return;
+    name = name.trim();
+    if(!name) return;
+    if(state.catalog.sites.indexOf(name) !== -1){ toast("Ce site existe déjà."); return; }
+    state.catalog.sites.push(name);
+    saveCatalog();
+    renderFlatEditor("#settingsSites","sites");
+    refreshDependentSelectsAfterCatalogChange();
+  });
+
   $("#btnAddClasse").addEventListener("click", function(){
     var name = prompt("Nom de la nouvelle classe de défaut :");
     if(!name) return;
@@ -4400,7 +4449,8 @@ function wireSettingsEvents(){
           produits: parsed.produits || base.produits,
           defauts: parsed.defauts || base.defauts,
           niveaux: (parsed.niveaux && parsed.niveaux.length) ? parsed.niveaux : base.niveaux,
-          classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes
+          classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes,
+          sites: (parsed.sites && parsed.sites.length) ? parsed.sites : base.sites
         };
         saveCatalog();
         renderAllSettings();
@@ -4438,6 +4488,12 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   fillMachineSelect();
   fillProduitSelect();
+  fillSiteSelect();
+  var savedSite = safeLocalStorageGet(USER_SITE_KEY);
+  if(savedSite && $("#f-site")) $("#f-site").value = savedSite;
+  if($("#f-site")) $("#f-site").addEventListener("change", function(){
+    safeLocalStorageSet(USER_SITE_KEY, this.value);
+  });
   resetParamStatus();
   resetForm(false);
   renderParamList();
