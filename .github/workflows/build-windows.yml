@@ -67,7 +67,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Récupérer l'APK Android compilé par l'autre workflow
+      - name: Récupérer l'APK Android release signé (prioritaire)
+        id: release_apk
+        uses: actions/download-artifact@v4
+        with:
+          name: MIBEM-QHSE-release-apk
+          path: android-apk
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Récupérer l'APK de débogage (repli, si aucun APK release signé n'existe)
+        if: steps.release_apk.outcome != 'success'
         uses: actions/download-artifact@v4
         with:
           name: MIBEM-QHSE-debug-apk
