@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.github.com https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self'; frame-src 'none'; form-action 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>MIBEM — Contrôle Qualité Lignes</title>
 <style>
@@ -4241,7 +4242,14 @@ function playSyncError(){ playTone([300, 220], 220); }
 /* ===================== SYNCHRONISATION TABLEAU DE BORD (Google Sheets via Apps Script) ===================== */
 var SYNC_URL_KEY = "mibem_qhse_sync_url_v1";
 function loadSyncUrl(){ return safeLocalStorageGet(SYNC_URL_KEY) || ""; }
-function saveSyncUrl(url){ safeLocalStorageSet(SYNC_URL_KEY, url); }
+function saveSyncUrl(url){
+  if(url && url.indexOf("https://") !== 0){
+    toast("⚠️ L'URL doit commencer par https:// — synchronisation non enregistrée.");
+    return false;
+  }
+  safeLocalStorageSet(SYNC_URL_KEY, url);
+  return true;
+}
 
 function buildSyncPayload(){
   var controls = state.shiftControls;
@@ -4332,7 +4340,7 @@ function checkForUpdates(){
         host.innerHTML =
           '<div class="alert-box" style="border-color:var(--nc);background:#fdf0ee;color:#7a2015;">'+
             '🚨 Nouvelle version disponible : <b>v'+escapeHtml(latestTag)+'</b> (vous avez v'+escapeHtml(APP_VERSION)+')<br>'+
-            '<a href="'+link+'" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:8px;display:inline-block;text-decoration:none;">⬇️ Télécharger la mise à jour</a>'+
+            '<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:8px;display:inline-block;text-decoration:none;">⬇️ Télécharger la mise à jour</a>'+
           '</div>';
       } else {
         host.innerHTML = '<div class="alert-box" style="border-color:var(--ok);background:#eef8f1;color:#1d5c37;">✅ Vous utilisez déjà la dernière version (v'+escapeHtml(APP_VERSION)+').</div>';
@@ -4349,11 +4357,10 @@ function wireSettingsEvents(){
 
   if($("#syncUrlInput")) $("#syncUrlInput").value = loadSyncUrl();
   $("#btnSaveSyncUrl").addEventListener("click", function(){
-    saveSyncUrl($("#syncUrlInput").value.trim());
-    toast("URL de synchronisation enregistrée ✔");
+    if(saveSyncUrl($("#syncUrlInput").value.trim())) toast("URL de synchronisation enregistrée ✔");
   });
   $("#btnTestSync").addEventListener("click", function(){
-    saveSyncUrl($("#syncUrlInput").value.trim());
+    if(!saveSyncUrl($("#syncUrlInput").value.trim())) return;
     var host = $("#syncTestResult");
     host.innerHTML = '<div class="hint">Test en cours…</div>';
     syncToGoogleSheets(false).then(function(ok){

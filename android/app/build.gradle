@@ -16,10 +16,33 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Signature de la version release : les informations viennent de variables
+    // d'environnement (définies par le CI à partir de secrets GitHub), jamais
+    // en dur dans ce fichier ni commitées dans le dépôt. Si elles sont absentes
+    // (poste de dev local sans configuration de signature), le build release
+    // reste possible mais produira un APK non signé — seul le CI avec les
+    // secrets configurés doit servir à publier une version aux utilisateurs.
+    def releaseKeystorePath = System.getenv("MIBEM_RELEASE_KEYSTORE")
+    def hasReleaseSigning = releaseKeystorePath != null && file(releaseKeystorePath).exists()
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(releaseKeystorePath)
+                storePassword System.getenv("MIBEM_RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("MIBEM_RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("MIBEM_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
