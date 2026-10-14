@@ -2008,7 +2008,7 @@ function enhanceSelectWithSearch(select, placeholder){
         Array.prototype.forEach.call(node.children, function(opt){
           data.push({value:opt.value, label:opt.textContent, group:node.label});
         });
-      } else if(node.tagName === "OPTION"){
+      } else if(node.tagName === "OPTION" && node.value){
         data.push({value:node.value, label:node.textContent, group:null});
       }
     });
@@ -2017,7 +2017,7 @@ function enhanceSelectWithSearch(select, placeholder){
 
   function syncInputFromSelect(){
     var opt = select.options[select.selectedIndex];
-    input.value = opt ? opt.textContent : "";
+    input.value = (opt && opt.value) ? opt.textContent : "";
   }
 
   function closeDropdown(){
@@ -2079,7 +2079,7 @@ function enhanceSelectWithSearch(select, placeholder){
 
 function fillMachineSelect(){
   var sel = $("#f-machine");
-  sel.innerHTML = "";
+  sel.innerHTML = '<option value="" selected>— Choisir une ligne —</option>';
   var groups = {};
   state.catalog.machines.forEach(function(m){
     groups[m.emballage] = groups[m.emballage] || [];
@@ -2116,7 +2116,7 @@ function fillSiteSelect(){
 }
 function fillProduitSelect(){
   var sel = $("#f-produit");
-  sel.innerHTML = "";
+  sel.innerHTML = '<option value="" selected>— Choisir un produit —</option>';
   Object.keys(state.catalog.produits).forEach(function(fam){
     var og = document.createElement("optgroup");
     og.label = fam;
@@ -4985,6 +4985,9 @@ document.addEventListener("DOMContentLoaded", async function(){
   wireSettingsEvents();
   wirePin();
   wireNavigation();
+  // Demande au système de ne jamais effacer automatiquement les données de l'application
+  // (contrôles, photos, historique) quand l'espace de stockage de l'appareil est faible.
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
   if($("#curVersionLabel")) $("#curVersionLabel").textContent = "v"+APP_VERSION;
 
   // Bouton photo unique (délégué : couvre tous les blocs, y compris ceux créés dynamiquement)
@@ -5076,6 +5079,7 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   // Module 1 — Synthèse produits et lots du quart
   $("#btnBuildExtract1").addEventListener("click", renderExtract1Preview);
+  $("#btnBuildExtract2").addEventListener("click", renderExtract2Preview);
   $("#extract1ActionsTrigger").addEventListener("click", function(){
     var d = $("#extract-date").value, q = $("#extract-quart").value;
     openExportSheet({title:"Produits et lots du quart", getNode:function(){ return $("#extract1PreviewHost"); },
