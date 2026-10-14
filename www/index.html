@@ -681,6 +681,10 @@ main{
 }
 .pin-check{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:.8rem;margin:6px 0 10px;}
 .pin-check input{margin-top:3px;width:18px;height:18px;}
+.export-chips{display:flex;gap:8px;margin-bottom:8px;}
+.export-chip{flex:1;padding:10px 6px;border:2px solid #d9d4c5;background:#fff;border-radius:10px;font-weight:700;font-size:.85rem;color:var(--ink-soft);cursor:pointer;}
+.export-chip.on{border-color:var(--dark2);background:var(--dark2);color:#fff;}
+.export-hint{font-size:.72rem;color:var(--ink-soft);margin:0 0 12px;min-height:1.1em;}
 @media print{
   .app-header,.bottom-nav,.tabs,.btn-row,.modal-actions{display:none!important;}
 }
@@ -813,7 +817,7 @@ main{
       <div id="historyList"></div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-dark btn-block" id="btnHistXLSX">📊 Exporter tout le quart en Excel</button>
+      <button class="btn btn-dark btn-block" id="btnHistXLSX">📊 Exporter le quart (Excel)</button>
     </div>
     <div class="btn-row">
       <button class="btn btn-danger btn-block" id="btnNewShift">🔄 Démarrer un nouveau quart (efface l'historique)</button>
@@ -857,14 +861,7 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildExtract1">🔎 Extraire les produits et lots</button>
       <div id="extract1PreviewHost"></div>
-      <div class="actions-menu" id="extract1ExportRow" style="display:none;margin-top:10px;">
-        <button class="btn btn-dark actions-menu-trigger" id="extract1ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
-        <div class="actions-menu-dropdown" id="extract1ActionsDropdown">
-          <button class="actions-menu-item" id="btnExtract1PDF">📄 Exporter en PDF</button>
-          <button class="actions-menu-item" id="btnExtract1Excel">📊 Exporter en Excel</button>
-          <button class="actions-menu-item" id="btnExtract1PNG">📲 Partager en image</button>
-        </div>
-      </div>
+      <div id="extract1ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract1ActionsTrigger">📤 Partager / Exporter</button></div>
     </div>
 
     <!-- ============ MODULE 2 : JOURNAL ISOLÉ DES NON-CONFORMITÉS ============ -->
@@ -881,14 +878,7 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildExtract2">🔎 Isoler les non-conformités</button>
       <div id="extract2PreviewHost"></div>
-      <div class="actions-menu" id="extract2ExportRow" style="display:none;margin-top:10px;">
-        <button class="btn btn-dark actions-menu-trigger" id="extract2ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
-        <div class="actions-menu-dropdown" id="extract2ActionsDropdown">
-          <button class="actions-menu-item" id="btnExtract2PDF">📄 Exporter en PDF</button>
-          <button class="actions-menu-item" id="btnExtract2Excel">📊 Exporter en Excel</button>
-          <button class="actions-menu-item" id="btnExtract2PNG">📲 Partager en image</button>
-        </div>
-      </div>
+      <div id="extract2ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract2ActionsTrigger">📤 Partager / Exporter</button></div>
     </div>
 
     <!-- ============ MODULE 3 : TENDANCE MULTI-QUARTS (récurrence dans le temps) ============ -->
@@ -906,15 +896,7 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildExtract3">🔎 Analyser la tendance</button>
       <div id="extract3PreviewHost"></div>
-      <div class="actions-menu" id="extract3ExportRow" style="display:none;margin-top:10px;">
-        <button class="btn btn-dark actions-menu-trigger" id="extract3ActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
-        <div class="actions-menu-dropdown" id="extract3ActionsDropdown">
-          <button class="actions-menu-item" id="btnExtract3PDF">📄 Exporter en PDF</button>
-          <button class="actions-menu-item" id="btnExtract3Excel">📊 Exporter en Excel</button>
-          <button class="actions-menu-item" id="btnExtract3PNG">📲 Partager en image</button>
-          <button class="actions-menu-item" id="btnExtract3Reset" style="color:#b3261e;">🗑️ Réinitialiser l'historique de tendance</button>
-        </div>
-      </div>
+      <div id="extract3ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract3ActionsTrigger">📤 Partager / Exporter</button><button class="btn btn-ghost btn-block" id="btnExtract3Reset" style="margin-top:8px;color:#b3261e;">🗑️ Réinitialiser l'historique de tendance</button></div>
     </div>
   </section>
 
@@ -1045,15 +1027,7 @@ main{
     <button class="close-x" id="closeReportModal">✕</button>
     <div id="reportDocHost"></div>
     <div class="modal-actions">
-      <div class="actions-menu">
-        <button class="btn btn-dark actions-menu-trigger" id="reportActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>
-        <div class="actions-menu-dropdown" id="reportActionsDropdown">
-          <button class="actions-menu-item" id="btnExportPNG">🖼️ Exporter en image</button>
-          <button class="actions-menu-item" id="btnExportPDF">📄 Exporter en PDF</button>
-          <button class="actions-menu-item" id="btnShareWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>
-          <button class="actions-menu-item" id="btnShareImg">📤 Partager l'image</button>
-        </div>
-      </div>
+      <button class="btn btn-dark btn-block" id="reportActionsTrigger">📤 Partager / Exporter</button>
     </div>
   </div>
 </div>
@@ -1069,6 +1043,17 @@ main{
   </div>
 </div>
 
+<div class="modal-bg" id="exportSheet" style="z-index:120;align-items:flex-end;padding:0;">
+  <div class="modal-box" style="max-width:520px;border-radius:16px 16px 0 0;margin:0;padding:16px 16px 22px;">
+    <button class="close-x" id="exportSheetClose" aria-label="Fermer">✕</button>
+    <h3 id="exportSheetTitle" style="margin:0 0 4px;font-size:1.05rem;color:var(--dark2);">Partager / Exporter</h3>
+    <p class="hint" style="margin:0 0 12px;">1. Choisissez le format &nbsp; 2. Partagez ou enregistrez</p>
+    <div class="export-chips" id="exportChips"></div>
+    <div class="export-hint" id="exportFmtHint"></div>
+    <button class="btn btn-primary btn-block" id="exportDoShare">📤 Partager (WhatsApp, e-mail, Drive…)</button>
+    <button class="btn btn-ghost btn-block" id="exportDoSave" style="margin-top:8px;">💾 Enregistrer sur l'appareil</button>
+  </div>
+</div>
 <div class="modal-bg" id="pinModal">
   <div class="modal-box pin-box"><div id="pinModalBody"></div></div>
 </div>
@@ -3792,31 +3777,15 @@ function renderSynthPreview(){
   }
   host.innerHTML = '<div class="card" style="padding:0;overflow:hidden;"><div id="synthDocWrap" style="padding:16px;">'+buildSynthesisHtml()+'</div>'+
     '<div style="padding:0 16px 16px;">'+
-      '<div class="actions-menu">'+
-        '<button class="btn btn-dark actions-menu-trigger" id="synthActionsTrigger">📤 Partager / Exporter <span class="caret">▾</span></button>'+
-        '<div class="actions-menu-dropdown" id="synthActionsDropdown">'+
-          '<button class="actions-menu-item" id="btnSynthPNG">🖼️ Exporter en image</button>'+
-          '<button class="actions-menu-item" id="btnSynthPDF">📄 Exporter en PDF</button>'+
-          '<button class="actions-menu-item" id="btnSynthWA">📤 Partager le PDF (WhatsApp, e-mail, Drive…)</button>'+
-          '<button class="actions-menu-item" id="btnSynthShareImg">📤 Partager l\'image</button>'+
-          '<button class="actions-menu-item" id="btnSynthXLSX">📊 Exporter en Excel</button>'+
-          '<button class="actions-menu-item" id="btnSynthShareXLSX">📤 Partager l\'Excel</button>'+
-          '<button class="actions-menu-item" id="btnSynthSync">🔄 Synchroniser vers le tableau de bord</button>'+
-        '</div>'+
-      '</div>'+
+      '<button class="btn btn-dark btn-block" id="synthActionsTrigger">📤 Partager / Exporter</button>'+
+    '<button class="btn btn-ghost btn-block" id="btnSynthSync" style="margin-top:8px;">🔄 Synchroniser vers le tableau de bord</button>'+
     '</div></div>';
-  $("#btnSynthPNG").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "png", "MIBEM_Synthese_"+todayISO()); });
-  $("#btnSynthPDF").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "pdf", "MIBEM_Synthese_"+todayISO()); });
-  $("#btnSynthWA").addEventListener("click", function(){
-    shareNode($("#synthDocWrap"), "MIBEM_Synthese_"+todayISO(), buildSynthesisCaption(), "pdf");
+  $("#synthActionsTrigger").addEventListener("click", function(){
+    openExportSheet({title:"Synthèse de fin de quart", getNode:function(){ return $("#synthDocWrap"); },
+      filename:"MIBEM_Synthese_"+todayISO(), caption:buildSynthesisCaption(),
+      excel:{ save:exportShiftToExcel, share:function(){ shareShiftExcel(buildSynthesisCaption()); } }});
   });
-  $("#btnSynthShareImg").addEventListener("click", function(){
-    shareNode($("#synthDocWrap"), "MIBEM_Synthese_"+todayISO(), buildSynthesisCaption(), "png");
-  });
-  $("#btnSynthXLSX").addEventListener("click", exportShiftToExcel);
-  $("#btnSynthShareXLSX").addEventListener("click", function(){ shareShiftExcel(buildSynthesisCaption()); });
   $("#btnSynthSync").addEventListener("click", function(){ syncToGoogleSheets(true); });
-  wireActionsMenu("#synthActionsTrigger", "#synthActionsDropdown");
 }
 
 /* ===================== EXPORT PNG / PDF / PARTAGE ===================== */
@@ -4336,6 +4305,56 @@ function exportShiftToExcel(){
     XLSX.writeFile(wb, filename);
     toast("Export Excel généré ✔");
   }
+}
+
+function shareExtractExcel(wb, filename, text){
+  toast("Préparation du fichier Excel...");
+  var mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+  var blob = new Blob([XLSX.write(wb, {bookType:"xlsx", type:"array"})], {type: mimeType});
+  shareBlobOrDownload(base64, blob, filename, mimeType, text, "Excel");
+}
+
+/* ===== Feuille unique "Partager / Exporter" : un seul bouton par document, un seul
+   endroit où choisir le format (PDF, Image, Excel) puis Partager ou Enregistrer. ===== */
+var exportCfg = null, exportFmt = "pdf";
+var EXPORT_FMT_HINTS = {
+  pdf: "PDF : qualité préservée, non recompressé par WhatsApp (recommandé).",
+  png: "Image : rapide à voir, mais WhatsApp peut la compresser.",
+  xlsx: "Excel : données exploitables (tableaux, filtres)."
+};
+function renderExportSheet(){
+  var fmts = [["pdf","📄 PDF"],["png","🖼️ Image"]];
+  if(exportCfg && exportCfg.excel) fmts.push(["xlsx","📊 Excel"]);
+  $("#exportChips").innerHTML = fmts.map(function(f){
+    return '<button type="button" class="export-chip'+(f[0]===exportFmt?' on':'')+'" data-fmt="'+f[0]+'">'+f[1]+'</button>';
+  }).join("");
+  $("#exportFmtHint").textContent = EXPORT_FMT_HINTS[exportFmt] || "";
+}
+function openExportSheet(cfg){
+  exportCfg = cfg; exportFmt = "pdf";
+  $("#exportSheetTitle").textContent = cfg.title || "Partager / Exporter";
+  renderExportSheet();
+  $("#exportSheet").classList.add("show");
+}
+function runExport(act){
+  var cfg = exportCfg; if(!cfg) return;
+  $("#exportSheet").classList.remove("show");
+  if(exportFmt === "xlsx"){ if(cfg.excel && cfg.excel[act]) cfg.excel[act](); return; }
+  var node = cfg.getNode();
+  if(!node || !node.innerHTML){ toast("Rien à exporter pour le moment."); return; }
+  if(act === "share") shareNode(node, cfg.filename, cfg.caption, exportFmt);
+  else exportNode(node, exportFmt, cfg.filename);
+}
+function wireExportSheet(){
+  $("#exportChips").addEventListener("click", function(e){
+    var b = e.target.closest("[data-fmt]"); if(!b) return;
+    exportFmt = b.getAttribute("data-fmt"); renderExportSheet();
+  });
+  $("#exportDoShare").addEventListener("click", function(){ runExport("share"); });
+  $("#exportDoSave").addEventListener("click", function(){ runExport("save"); });
+  $("#exportSheetClose").addEventListener("click", function(){ $("#exportSheet").classList.remove("show"); });
+  $("#exportSheet").addEventListener("click", function(e){ if(e.target.id === "exportSheet") $("#exportSheet").classList.remove("show"); });
 }
 
 function shareShiftExcel(text){
@@ -4935,49 +4954,30 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   // Module 1 — Synthèse produits et lots du quart
   $("#btnBuildExtract1").addEventListener("click", renderExtract1Preview);
-  $("#btnExtract1PDF").addEventListener("click", function(){
-    exportNode($("#extract1PreviewHost"), "pdf", "MIBEM_ProduitsLots_"+$("#extract-date").value);
+  $("#extract1ActionsTrigger").addEventListener("click", function(){
+    var d = $("#extract-date").value, q = $("#extract-quart").value;
+    openExportSheet({title:"Produits et lots du quart", getNode:function(){ return $("#extract1PreviewHost"); },
+      filename:"MIBEM_ProduitsLots_"+d, caption:"Synthèse produits et lots — MIBEM COMPANY — "+q,
+      excel:{ save:function(){ exportExtractExcel(buildExtract1ExcelWorkbook(d,q), "MIBEM_ProduitsLots_"+d+".xlsx"); },
+              share:function(){ shareExtractExcel(buildExtract1ExcelWorkbook(d,q), "MIBEM_ProduitsLots_"+d+".xlsx", "Synthèse produits et lots — MIBEM COMPANY — "+q); } }});
   });
-  $("#btnExtract1Excel").addEventListener("click", function(){
-    var wb = buildExtract1ExcelWorkbook($("#extract-date").value, $("#extract-quart").value);
-    exportExtractExcel(wb, "MIBEM_ProduitsLots_"+$("#extract-date").value+".xlsx");
+  $("#extract2ActionsTrigger").addEventListener("click", function(){
+    var d = $("#extract2-date").value, q = $("#extract2-quart").value;
+    openExportSheet({title:"Journal des non-conformités", getNode:function(){ return $("#extract2PreviewHost"); },
+      filename:"MIBEM_JournalNC_"+d, caption:"Journal des non-conformités — MIBEM COMPANY — "+q,
+      excel:{ save:function(){ exportExtractExcel(buildExtract2ExcelWorkbook(d,q), "MIBEM_JournalNC_"+d+".xlsx"); },
+              share:function(){ shareExtractExcel(buildExtract2ExcelWorkbook(d,q), "MIBEM_JournalNC_"+d+".xlsx", "Journal des non-conformités — MIBEM COMPANY — "+q); } }});
   });
-  $("#btnExtract1PNG").addEventListener("click", function(){
-    shareNode($("#extract1PreviewHost"), "MIBEM_ProduitsLots_"+$("#extract-date").value,
-      "Synthèse produits et lots — MIBEM COMPANY — "+$("#extract-quart").value, "png");
-  });
-
-  // Module 2 — Journal isolé des non-conformités
-  $("#btnBuildExtract2").addEventListener("click", renderExtract2Preview);
-  $("#btnExtract2PDF").addEventListener("click", function(){
-    exportNode($("#extract2PreviewHost"), "pdf", "MIBEM_JournalNC_"+$("#extract2-date").value);
-  });
-  $("#btnExtract2Excel").addEventListener("click", function(){
-    var wb = buildExtract2ExcelWorkbook($("#extract2-date").value, $("#extract2-quart").value);
-    exportExtractExcel(wb, "MIBEM_JournalNC_"+$("#extract2-date").value+".xlsx");
-  });
-  $("#btnExtract2PNG").addEventListener("click", function(){
-    shareNode($("#extract2PreviewHost"), "MIBEM_JournalNC_"+$("#extract2-date").value,
-      "Journal des non-conformités — MIBEM COMPANY — "+$("#extract2-quart").value, "png");
-  });
-  wireActionsMenu("#extract1ActionsTrigger", "#extract1ActionsDropdown");
-  wireActionsMenu("#extract2ActionsTrigger", "#extract2ActionsDropdown");
 
   // Module 3 — Tendance multi-quarts
   $("#btnBuildExtract3").addEventListener("click", renderExtract3Preview);
-  $("#btnExtract3PDF").addEventListener("click", function(){
-    exportNode($("#extract3PreviewHost"), "pdf", "MIBEM_Tendance_"+todayISO());
-  });
-  $("#btnExtract3Excel").addEventListener("click", function(){
-    var windowDays = $("#extract3-window").value;
-    computeMultiShiftRecurrence(windowDays).then(function(data){
-      var wb = buildExtract3ExcelWorkbook(data, windowDays);
-      exportExtractExcel(wb, "MIBEM_Tendance_"+todayISO()+".xlsx");
-    });
-  });
-  $("#btnExtract3PNG").addEventListener("click", function(){
-    shareNode($("#extract3PreviewHost"), "MIBEM_Tendance_"+todayISO(),
-      "Tendance multi-quarts — MIBEM COMPANY — "+(WINDOW_LABELS[$("#extract3-window").value]||""), "png");
+  $("#extract3ActionsTrigger").addEventListener("click", function(){
+    var wd = $("#extract3-window").value, cap = "Tendance multi-quarts — MIBEM COMPANY — "+(WINDOW_LABELS[wd]||"");
+    var fn = "MIBEM_Tendance_"+todayISO()+".xlsx";
+    openExportSheet({title:"Tendance multi-quarts", getNode:function(){ return $("#extract3PreviewHost"); },
+      filename:"MIBEM_Tendance_"+todayISO(), caption:cap,
+      excel:{ save:function(){ computeMultiShiftRecurrence(wd).then(function(data){ exportExtractExcel(buildExtract3ExcelWorkbook(data, wd), fn); }); },
+              share:function(){ computeMultiShiftRecurrence(wd).then(function(data){ shareExtractExcel(buildExtract3ExcelWorkbook(data, wd), fn, cap); }); } }});
   });
   $("#btnExtract3Reset").addEventListener("click", function(){
     if(confirm("Réinitialiser tout l'historique de tendance multi-quarts ? Cette action est irréversible (le quart en cours n'est pas affecté).")){
@@ -4987,7 +4987,6 @@ document.addEventListener("DOMContentLoaded", async function(){
       });
     }
   });
-  wireActionsMenu("#extract3ActionsTrigger", "#extract3ActionsDropdown");
 
   // Sensibilisation opérateurs
   $("#btnBuildAwareness").addEventListener("click", renderAwarenessPreview);
@@ -5007,15 +5006,12 @@ document.addEventListener("DOMContentLoaded", async function(){
     if(e.target.id === "reportModal") $("#reportModal").classList.remove("show");
   });
 
-  $("#btnExportPNG").addEventListener("click", function(){ exportNode($("#reportDocHost"), "png", "MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO())); });
-  $("#btnExportPDF").addEventListener("click", function(){ exportNode($("#reportDocHost"), "pdf", "MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO())); });
-  $("#btnShareWA").addEventListener("click", function(){
-    shareNode($("#reportDocHost"), "MIBEM_Controle", buildControlCaption(currentReportCtrl), "pdf");
+  $("#reportActionsTrigger").addEventListener("click", function(){
+    openExportSheet({title:"Rapport de contrôle", getNode:function(){ return $("#reportDocHost"); },
+      filename:"MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO()),
+      caption:buildControlCaption(currentReportCtrl), excel:null});
   });
-  $("#btnShareImg").addEventListener("click", function(){
-    shareNode($("#reportDocHost"), "MIBEM_Controle", buildControlCaption(currentReportCtrl), "png");
-  });
-  wireActionsMenu("#reportActionsTrigger", "#reportActionsDropdown");
+  wireExportSheet();
  }catch(initErr){
   console.error("Erreur au démarrage de l'application :", initErr);
   try{ toast("Une erreur est survenue au démarrage — rechargez l'application."); }catch(e2){}
