@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.github.com https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self'; frame-src 'none'; form-action 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>MIBEM — Contrôle Qualité Lignes</title>
 <style>
@@ -28,7 +29,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   font-size:15px;
   line-height:1.45;
-  padding-bottom:70px;
+  padding-bottom:84px;
 }
 .app-header{
   background:linear-gradient(135deg,var(--dark) 0%,var(--dark2) 100%);
@@ -270,6 +271,13 @@ main{
 .photo-btn{
   flex:1;min-width:150px;text-align:center;cursor:pointer;
 }
+.photo-single-wrap{margin-bottom:6px;}
+.photo-single-btn{width:100%;}
+.photo-choice-box{
+  max-width:320px;text-align:center;
+}
+.photo-choice-box h3{margin:4px 0 14px;font-size:1rem;color:var(--dark2);}
+.photo-choice-actions{display:flex;flex-direction:column;gap:8px;}
 .synth-photo-card{
   background:#fffaf0;
   border:2.5px solid var(--gold);
@@ -288,6 +296,30 @@ main{
 @media(min-width:560px){
   .photo-grid-large .photo-item{width:calc(33.333% - 9px);}
 }
+.searchable-select-wrap{position:relative;}
+.searchable-select-input{
+  width:100%;padding:10px 11px;border:1.5px solid var(--line);border-radius:8px;
+  font-size:.92rem;background:#fdfcfa;color:var(--ink);font-family:inherit;
+}
+.searchable-select-input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+.searchable-select-native{
+  position:absolute;opacity:0;pointer-events:none;height:1px;width:1px;overflow:hidden;
+}
+.searchable-select-dropdown{
+  display:none;position:absolute;top:100%;left:0;right:0;z-index:70;
+  background:#fff;border:1.5px solid var(--gold);border-top:none;
+  border-radius:0 0 9px 9px;max-height:260px;overflow-y:auto;
+  box-shadow:0 8px 18px rgba(20,15,10,.18);
+}
+.searchable-select-dropdown.show{display:block;}
+.ssd-group{
+  padding:6px 12px 3px;font-size:.65rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--ink-soft);background:#f7f5ef;
+  position:sticky;top:0;
+}
+.ssd-item{padding:10px 13px;font-size:.86rem;cursor:pointer;border-bottom:1px solid #f2efe6;}
+.ssd-item:hover{background:var(--gold);color:#1c1200;}
+.ssd-empty{padding:14px;color:var(--ink-soft);font-size:.82rem;text-align:center;}
 .readonly-field{
   padding:10px 11px;border-radius:8px;background:#f2f0e8;
   border:1.5px dashed var(--line);font-weight:700;font-size:.86rem;color:var(--dark2);
@@ -371,100 +403,188 @@ main{
 }
 .stat-box .num{font-size:1.4rem;font-weight:800;color:var(--gold);}
 .stat-box .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:#dcd6c2;margin-top:2px;}
-/* Report styling (exported) */
+/* Report styling (exported) — redesign: dense one-page layout, 3-block structure
+   (header grid / results table / footer validation), colour badges instead of
+   repeated emoji, tables sized so nothing is ever truncated. */
 .report-doc{
   background:#fff;
-  padding:26px 24px;
-  font-family:Georgia,'Times New Roman',serif;
+  padding:20px 22px;
+  font-family:-apple-system,Arial,sans-serif;
   color:#1a1a1a;
   border:1px solid #ddd;
 }
 .report-doc .rtitle{
-  text-align:center;
+  text-align:left;
   font-weight:800;
-  font-size:1.3rem;
-  letter-spacing:.08em;
+  font-size:1.1rem;
+  letter-spacing:.02em;
   color:var(--dark);
-  padding-bottom:10px;
-  margin-bottom:0;
-  font-family:-apple-system,Arial,sans-serif;
-  flex:1;
+  margin-bottom:2px;
+}
+.report-doc .rcaption{
+  text-align:left;
+  font-size:.72rem;
+  font-weight:600;
+  color:#777;
 }
 .report-doc .rheader{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:12px;
   border-bottom:3px solid var(--gold);
-  padding-bottom:12px;
-  margin-bottom:14px;
+  padding-bottom:10px;
+  margin-bottom:12px;
 }
+.report-doc .rheader > div{flex:1;}
 .report-doc .rlogo{
-  height:56px;width:56px;object-fit:contain;flex-shrink:0;
+  height:44px;width:44px;object-fit:contain;flex-shrink:0;
 }
-.report-doc .rmeta{
+
+/* BLOCK 1 — header info grid: 3 columns, always aligned, wraps instead of
+   ever cutting text off. */
+.report-doc .rmeta-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:4px 18px;
-  font-size:.86rem;
-  margin-bottom:14px;
-  font-family:-apple-system,Arial,sans-serif;
-}
-.report-doc .rmeta div b{color:var(--dark2);}
-.report-doc h3.rsection{
-  font-family:-apple-system,Arial,sans-serif;
+  grid-template-columns:repeat(3, 1fr);
+  gap:2px 16px;
   font-size:.78rem;
+  margin-bottom:12px;
+  border:1px solid #e4e0d4;
+  border-radius:6px;
+  padding:8px 10px;
+  background:#fafaf6;
+}
+.report-doc .rmeta-grid .rmeta-col{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.report-doc .rmeta-grid .rmeta-item{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:1px 0;}
+.report-doc .rmeta-grid .rmeta-item span{color:#777;white-space:nowrap;flex-shrink:0;}
+.report-doc .rmeta-grid .rmeta-item b{text-align:right;white-space:normal;overflow-wrap:break-word;min-width:0;}
+
+.report-doc h3.rsection{
+  font-size:.72rem;
   text-transform:uppercase;
-  letter-spacing:.06em;
+  letter-spacing:.05em;
   color:#fff;
   background:var(--dark2);
-  padding:6px 10px;
+  padding:5px 9px;
   border-radius:5px;
-  margin:16px 0 8px;
+  margin:12px 0 6px;
 }
-.report-doc .rparam{
-  display:flex;justify-content:space-between;
-  padding:5px 4px;border-bottom:1px dotted #ccc;
-  font-family:-apple-system,Arial,sans-serif;font-size:.86rem;
+
+/* BLOCK 2 — results table. table-layout:auto + normal wrapping so long
+   labels (e.g. "Majeures") never get clipped; no oversized emoji per row. */
+.report-doc table{width:100%;border-collapse:collapse;font-size:.74rem;table-layout:auto;}
+.report-doc table th,.report-doc table td{
+  border:1px solid #ddd;padding:8px 8px;text-align:left;line-height:1.4;
+  white-space:nowrap;overflow-wrap:normal;word-break:normal;
 }
+.report-doc table th{background:var(--dark2);color:#fff;font-size:.64rem;text-transform:uppercase;letter-spacing:.02em;white-space:normal;overflow-wrap:break-word;padding:9px 6px;line-height:1.25;}
+/* Réservé aux colonnes de texte libre (description, action immédiate, cause) où un
+   retour à la ligne normal est acceptable et nécessaire — jamais lettre par lettre. */
+.report-doc table td.rwrap{white-space:normal;overflow-wrap:break-word;word-break:normal;}
+.report-doc table td.rcell-center{text-align:center;}
+
+/* Status badges — discreet colour chips, replacing repeated large emoji. */
+.report-doc .rbadge{
+  display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  white-space:nowrap;
+}
+.report-doc .rbadge-ok{background:#e6f6ea;color:#1d7a3c;}
+.report-doc .rbadge-warn{background:#fff3d6;color:#8a6100;}
+.report-doc .rbadge-nc{background:#fdeceb;color:#b3261e;}
+
 .report-doc .rnc{
   border-left:4px solid var(--nc);
   background:#fdf3f2;
-  padding:8px 10px;margin-bottom:8px;
-  font-family:-apple-system,Arial,sans-serif;font-size:.82rem;
+  padding:7px 9px;margin-bottom:6px;
+  font-size:.74rem;
   border-radius:0 6px 6px 0;
 }
+.report-doc .rnc b{color:#8a2119;}
 .report-doc .ralert{
   border-left:4px solid var(--warn);
   background:#fdf7e9;
-  padding:8px 10px;margin-bottom:8px;border-radius:0 6px 6px 0;
-  font-family:-apple-system,Arial,sans-serif;font-size:.82rem;
+  padding:7px 9px;border-radius:0 6px 6px 0;font-size:.78rem;
 }
-.report-doc table{width:100%;border-collapse:collapse;font-family:-apple-system,Arial,sans-serif;font-size:.76rem;}
-.report-doc table th,.report-doc table td{border:1px solid #ccc;padding:5px 6px;text-align:left;}
-.report-doc table th{background:var(--dark2);color:#fff;font-size:.68rem;text-transform:uppercase;}
+.report-doc .ralert.rempty{border-left-color:#ccc;background:#f7f7f4;color:#888;font-style:italic;}
+
+/* BLOCK 3 — footer validation: controller + alerts + photo gallery all live
+   together at the bottom of the same page, never isolated on a new one. */
+.report-doc .rfooter-block{
+  margin-top:14px;padding-top:10px;border-top:2px solid #eee;
+  break-inside:avoid;page-break-inside:avoid;
+}
 .report-doc .rfoot{
-  margin-top:20px;display:flex;justify-content:space-between;
-  font-size:.78rem;color:#555;font-family:-apple-system,Arial,sans-serif;
+  margin-top:10px;display:flex;justify-content:space-between;
+  font-size:.76rem;color:#555;
+  border-top:1px solid #eee;padding-top:8px;
 }
-.report-doc .rphotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
-.report-doc .rphotos img{width:90px;height:90px;object-fit:cover;border-radius:5px;border:1px solid #ccc;}
-.report-doc .rphotos-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
-.report-doc .rphoto-cell{
-  width:120px;font-family:-apple-system,Arial,sans-serif;font-size:.66rem;
-  text-align:center;color:#444;
+
+/* Photo gallery — règle unique pour TOUTES les sections photo de l'application
+   (Photos terrain, Photos de non-conformité, photo de fiche de synthèse) :
+   4 vignettes par ligne, jamais coincées dans un tableau. Flexbox plutôt que
+   CSS Grid : une ligne incomplète (ex. 5 photos → 4 + 1) ne réserve plus de
+   piste vide, ce qui évite le grand espace blanc et le saut de page artificiel
+   observés à l'export lorsque le nombre de photos n'est pas un multiple de 4. */
+.report-doc .rgallery{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:8px auto 0;
 }
-.report-doc .rphoto-cell img{
-  width:120px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ccc;display:block;
+.report-doc .rgallery .rgallery-cell{
+  border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f4f2ec;
+  width:calc(25% - 7.5px);
+  flex:0 0 auto;
 }
-.report-doc .rphoto-cap{margin-top:3px;}
+.report-doc .rgallery .rgallery-cell img{
+  width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;
+}
+.report-doc .rgallery .rgallery-cap{
+  font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* Variante grande — photo de la fiche de rapport du quart : 2 par ligne maximum
+   (souvent une seule), image nettement plus haute pour rester immédiatement
+   visible et lisible dès l'ouverture du rapport. */
+.report-doc .rgallery.rgallery-large{gap:12px;}
+.report-doc .rgallery .rgallery-cell-large{
+  width:calc(50% - 6px);
+  border-width:2px;border-color:var(--gold);box-shadow:0 2px 8px rgba(30,20,10,.1);
+}
+.report-doc .rgallery .rgallery-cell-large .rgallery-cap{font-size:.72rem;white-space:normal;padding:5px 6px;}
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
   background:#fff;border-top:1px solid var(--line);
-  padding:8px 10px;
-  display:none;
-  gap:6px;
+  box-shadow:0 -2px 10px rgba(30,20,10,.08);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  display:flex;
+  gap:2px;
   z-index:40;
 }
+.bottom-nav.hide{display:none;}
+.bottom-nav .tab-btn{
+  flex:1;min-width:0;background:none;border:none;border-radius:10px;
+  color:var(--ink-soft);padding:6px 2px;font-size:.66rem;font-weight:700;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.bottom-nav .tab-btn .ni{font-size:1.25rem;line-height:1;}
+.bottom-nav .tab-btn.active{background:#f3e9d6;color:var(--dark2);}
+.bottom-nav .tab-badge{top:0;right:calc(50% - 22px);}
+.subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.subnav button{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.subnav button.on{background:var(--dark2);border-color:var(--dark2);color:#fff;}
+.home-hello{margin:0 0 12px;}
+.home-hello b{font-size:1.1rem;color:var(--dark2);}
+.home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.home-stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center;}
+.home-stat .n{font-size:1.6rem;font-weight:800;color:var(--dark2);line-height:1.1;}
+.home-stat .l{font-size:.68rem;color:var(--ink-soft);margin-top:2px;}
+.home-stat.bad .n{color:var(--nc);} .home-stat.good .n{color:var(--ok);}
+.home-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.home-actions .btn{margin:0;}
+.home-recent .history-item{cursor:pointer;}
+.toast{bottom:84px;}
 .modal-bg{
   position:fixed;inset:0;background:rgba(15,25,20,.55);
   display:none;align-items:flex-start;justify-content:center;
@@ -483,6 +603,52 @@ main{
   float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--ink-soft);
 }
 .hint{font-size:.72rem;color:var(--ink-soft);margin-top:2px;}
+
+/* ===================== BULLE DE MESSAGE — SENSIBILISATION OPÉRATEURS =====================
+   Présente le message généré automatiquement comme une bulle de conversation
+   (façon WhatsApp) — reconnaissable immédiatement comme "un message à envoyer",
+   pas comme un rapport de plus. */
+.chat-bubble-wrap{display:flex;justify-content:flex-end;}
+.chat-bubble{
+  background:#dcf8c6;
+  border-radius:14px 14px 4px 14px;
+  padding:14px 16px;
+  max-width:100%;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);
+  font-size:.9rem;
+  line-height:1.55;
+  white-space:pre-wrap;
+  color:#1a1a1a;
+}
+.chat-bubble .cb-meta{
+  display:block;text-align:right;font-size:.68rem;color:#5a8a4a;margin-top:8px;
+}
+.chat-bubble-empty{
+  background:#f3f1ea;border-radius:10px;padding:14px 16px;color:var(--ink-soft);font-size:.85rem;font-style:italic;
+}
+
+/* ===================== MENU D'ACTIONS UNIFIÉ (Exporter / Partager) =====================
+   Remplace les rangées de boutons individuels (image, PDF, Excel, partage, sync...)
+   par un seul bouton "Actions" qui déplie un menu épuré au clic. Utilisé partout dans
+   l'app (rapport de contrôle, synthèse, modules d'extraction) pour une zone inférieure
+   toujours compacte, quel que soit le nombre d'options disponibles. */
+.actions-menu{position:relative;width:100%;}
+.actions-menu-trigger{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;}
+.actions-menu-trigger .caret{font-size:.7em;transition:transform .15s ease;}
+.actions-menu-trigger.open .caret{transform:rotate(180deg);}
+.actions-menu-dropdown{
+  display:none;position:absolute;left:0;right:0;bottom:calc(100% + 8px);
+  background:#fff;border:1px solid #e4e0d4;border-radius:12px;
+  box-shadow:0 10px 30px rgba(30,20,10,.18);overflow:hidden;z-index:60;
+}
+.actions-menu-dropdown.open{display:block;}
+.actions-menu-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:13px 16px;border:none;background:#fff;font-size:.9rem;color:var(--ink);
+  cursor:pointer;border-bottom:1px solid #f0eee7;font-family:inherit;
+}
+.actions-menu-item:last-child{border-bottom:none;}
+.actions-menu-item:hover,.actions-menu-item:active{background:#f7f5ee;}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--dark);color:#fff;padding:10px 18px;border-radius:8px;
@@ -521,8 +687,31 @@ main{
 .settings-add-row button{
   flex-shrink:0;padding:7px 12px;border-radius:7px;border:none;background:var(--gold);color:#1c1200;font-weight:700;cursor:pointer;font-size:.78rem;
 }
+/* ===================== CODE PIN (accès aux Paramètres) ===================== */
+.pin-box{max-width:380px;margin-top:60px;text-align:center;}
+.pin-box h3{margin:4px 0 6px;color:var(--dark2);font-size:1.05rem;}
+.pin-box p{font-size:.82rem;color:var(--ink-soft);margin:0 0 12px;line-height:1.45;}
+.pin-input{
+  width:100%;padding:12px 10px;font-size:1.5rem;text-align:center;letter-spacing:.5em;
+  border:1.5px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;
+}
+.pin-input:focus{outline:none;border-color:var(--gold-dark);}
+.pin-msg{min-height:1.2em;font-size:.78rem;color:var(--nc);margin:2px 0 8px;font-weight:600;}
+.pin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.pin-actions .btn{flex:1;min-width:110px;}
+.pin-link{background:none;border:none;color:var(--dark2);text-decoration:underline;font-size:.78rem;cursor:pointer;margin-top:10px;}
+.pin-code-box{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.5rem;font-weight:800;letter-spacing:.12em;
+  background:#fff;border:2px dashed var(--gold-dark);border-radius:10px;padding:14px 8px;margin:8px 0 12px;user-select:all;
+}
+.pin-check{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:.8rem;margin:6px 0 10px;}
+.pin-check input{margin-top:3px;width:18px;height:18px;}
+.export-chips{display:flex;gap:8px;margin-bottom:8px;}
+.export-chip{flex:1;padding:10px 6px;border:2px solid #d9d4c5;background:#fff;border-radius:10px;font-weight:700;font-size:.85rem;color:var(--ink-soft);cursor:pointer;}
+.export-chip.on{border-color:var(--dark2);background:var(--dark2);color:#fff;}
+.export-hint{font-size:.72rem;color:var(--ink-soft);margin:0 0 12px;min-height:1.1em;}
 @media print{
-  .app-header,.bottom-nav,.tabs,.btn-row,.modal-actions{display:none!important;}
+  .app-header,.bottom-nav,.tabs,.subnav,.btn-row,.modal-actions{display:none!important;}
 }
 </style>
 </head>
@@ -536,21 +725,39 @@ main{
     </div>
     <div class="session-pill" id="sessionPill">Quart en cours</div>
   </div>
-  <div class="tabs">
-    <button class="tab-btn active" data-view="form">Nouveau contrôle</button>
-    <button class="tab-btn" data-view="history">Historique <span class="tab-badge" id="histBadge" style="display:none">0</span></button>
-    <button class="tab-btn" data-view="synth">Synthèse fin de quart</button>
-    <button class="tab-btn" data-view="settings">⚙️ Paramètres</button>
-  </div>
 </header>
 
 <main>
 
+  <!-- ============ VIEW: ACCUEIL ============ -->
+  <section class="view active" id="view-home">
+    <p class="home-hello"><b id="homeTitle">Bonjour</b><br><span class="hint" id="homeSub"></span></p>
+    <div class="home-stats">
+      <div class="home-stat"><div class="n" id="homeN">0</div><div class="l">Contrôles du quart</div></div>
+      <div class="home-stat bad"><div class="n" id="homeNC">0</div><div class="l">Non-conformités</div></div>
+      <div class="home-stat good"><div class="n" id="homeRate">—</div><div class="l">Contrôles conformes</div></div>
+    </div>
+    <div class="home-actions">
+      <button class="btn btn-primary" data-goto="form">➕ Nouveau contrôle</button>
+      <button class="btn btn-dark" data-goto="history">📋 Historique</button>
+      <button class="btn btn-dark" data-goto="synth">📊 Rapports</button>
+      <button class="btn btn-dark" data-goto="awareness">📢 Sensibilisation</button>
+    </div>
+    <div class="card home-recent">
+      <h2>Derniers contrôles</h2>
+      <div id="homeRecent"></div>
+    </div>
+  </section>
+
   <!-- ============ VIEW: FORM ============ -->
-  <section class="view active" id="view-form">
+  <section class="view" id="view-form">
 
     <div class="card">
       <h2>Identification du contrôle</h2>
+      <div class="field">
+        <label>Site de l'usine</label>
+        <select id="f-site"></select>
+      </div>
       <div class="grid2">
         <div class="field">
           <label>Date</label>
@@ -618,9 +825,10 @@ main{
     <div class="card">
       <h2>📷 Photos terrain (preuves)</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Ajoutez ici les photos prises sur le terrain (état produit, ligne, anomalie…) comme preuve. Elles seront jointes automatiquement au rapport de ce contrôle.</p>
-      <div class="photo-input-row">
-        <label class="btn btn-ghost photo-btn">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" id="terrainPhotoCamera" multiple style="display:none"></label>
-        <label class="btn btn-ghost photo-btn">🖼️ Choisir depuis la galerie<input type="file" accept="image/*" id="terrainPhotoGallery" multiple style="display:none"></label>
+      <div class="photo-single-wrap">
+        <button type="button" class="btn btn-ghost photo-single-btn">📷 Ajouter une photo</button>
+        <input type="file" accept="image/*" capture="environment" id="terrainPhotoCamera" multiple style="display:none">
+        <input type="file" accept="image/*" id="terrainPhotoGallery" multiple style="display:none">
       </div>
       <div class="photo-grid" id="terrainPhotoList"></div>
     </div>
@@ -647,7 +855,7 @@ main{
       <div id="historyList"></div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-dark btn-block" id="btnHistXLSX">📊 Exporter tout le quart en Excel</button>
+      <button class="btn btn-dark btn-block" id="btnHistXLSX">📊 Exporter le quart (Excel)</button>
     </div>
     <div class="btn-row">
       <button class="btn btn-danger btn-block" id="btnNewShift">🔄 Démarrer un nouveau quart (efface l'historique)</button>
@@ -656,16 +864,24 @@ main{
 
   <!-- ============ VIEW: SYNTHESIS ============ -->
   <section class="view" id="view-synth">
-    <div class="card synth-photo-card">
+    <div class="subnav" data-subnav>
+      <button data-rap="synth">Synthèse du quart</button>
+      <button data-rap="prod">Produits et lots</button>
+      <button data-rap="nc">Journal NC</button>
+      <button data-rap="trend">Tendance</button>
+      <button data-rap="awareness">Sensibilisation</button>
+    </div>
+    <div class="card synth-photo-card" data-rap="synth">
       <h2>📷 PHOTO DE LA FICHE DE RAPPORT <span style="color:var(--nc);">★</span></h2>
       <p class="hint" style="margin-top:-4px;margin-bottom:12px;">Espace dédié : déposez ici la photo de la fiche de rapport papier remplie en fin de quart (ou toute autre preuve globale du quart). Elle sera affichée en grand format dans la synthèse exportée.</p>
-      <div class="photo-input-row">
-        <label class="btn btn-primary photo-btn">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" id="synthPhotoCamera" multiple style="display:none"></label>
-        <label class="btn btn-dark photo-btn">🖼️ Choisir depuis la galerie<input type="file" accept="image/*" id="synthPhotoGallery" multiple style="display:none"></label>
+      <div class="photo-single-wrap">
+        <button type="button" class="btn btn-primary photo-single-btn">📷 Ajouter une photo</button>
+        <input type="file" accept="image/*" capture="environment" id="synthPhotoCamera" multiple style="display:none">
+        <input type="file" accept="image/*" id="synthPhotoGallery" multiple style="display:none">
       </div>
       <div class="photo-grid photo-grid-large" id="synthPhotoList"></div>
     </div>
-    <div class="card">
+    <div class="card" data-rap="synth">
       <h2>Synthèse de fin de quart</h2>
       <p class="hint" style="margin-top:-6px;">Regroupe automatiquement tous les contrôles et points d'alerte enregistrés depuis le début du quart.</p>
       <div class="field" style="margin-top:10px;">
@@ -674,44 +890,178 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildSynth">📋 Générer la synthèse</button>
     </div>
-    <div id="synthPreviewHost"></div>
+    <div id="synthPreviewHost" data-rap="synth"></div>
+
+    <!-- ============ MODULE 1 : SYNTHÈSE PRODUITS ET LOTS DU QUART ============ -->
+    <div class="card" data-rap="prod">
+      <h2>📦 Synthèse produits et lots du quart</h2>
+      <p class="hint" style="margin-top:-6px;">Extrait automatiquement les lignes déjà contrôlées — aucune ressaisie, ces données viennent de tes rapports de contrôle.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Date du quart</label>
+        <select id="extract-date"></select>
+      </div>
+      <div class="field">
+        <label>Quart</label>
+        <select id="extract-quart"></select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract1">🔎 Extraire les produits et lots</button>
+      <div id="extract1PreviewHost"></div>
+      <div id="extract1ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract1ActionsTrigger">📤 Partager / Exporter</button></div>
+    </div>
+
+    <!-- ============ MODULE 2 : JOURNAL ISOLÉ DES NON-CONFORMITÉS ============ -->
+    <div class="card" data-rap="nc">
+      <h2>🚨 Journal isolé des non-conformités</h2>
+      <p class="hint" style="margin-top:-6px;">Isole uniquement les anomalies détectées durant le quart sélectionné — aucune ressaisie.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Date du quart</label>
+        <select id="extract2-date"></select>
+      </div>
+      <div class="field">
+        <label>Quart</label>
+        <select id="extract2-quart"></select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract2">🔎 Isoler les non-conformités</button>
+      <div id="extract2PreviewHost"></div>
+      <div id="extract2ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract2ActionsTrigger">📤 Partager / Exporter</button></div>
+    </div>
+
+    <!-- ============ MODULE 3 : TENDANCE MULTI-QUARTS (récurrence dans le temps) ============ -->
+    <div class="card" data-rap="trend">
+      <h2>📈 Tendance multi-quarts (récurrence dans le temps)</h2>
+      <p class="hint" style="margin-top:-6px;">Détecte les défauts qui reviennent sur plusieurs quarts — signe d'une cause systémique (usure d'équipement, dérive process). Se construit automatiquement à chaque « Nouveau quart » démarré ; aucune ressaisie.</p>
+      <div class="field" style="margin-top:10px;">
+        <label>Fenêtre d'analyse</label>
+        <select id="extract3-window">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="all">Tout l'historique disponible</option>
+        </select>
+      </div>
+      <button class="btn btn-dark btn-block" id="btnBuildExtract3">🔎 Analyser la tendance</button>
+      <div id="extract3PreviewHost"></div>
+      <div id="extract3ExportRow" style="display:none;margin-top:10px;"><button class="btn btn-dark btn-block" id="extract3ActionsTrigger">📤 Partager / Exporter</button><button class="btn btn-ghost btn-block" id="btnExtract3Reset" style="margin-top:8px;color:#b3261e;">🗑️ Réinitialiser l'historique de tendance</button></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: SENSIBILISATION OPÉRATEURS ============ -->
+  <section class="view" id="view-awareness">
+    <div class="subnav" data-subnav>
+      <button data-rap="synth">Synthèse du quart</button>
+      <button data-rap="prod">Produits et lots</button>
+      <button data-rap="nc">Journal NC</button>
+      <button data-rap="trend">Tendance</button>
+      <button data-rap="awareness">Sensibilisation</button>
+    </div>
+    <div class="card">
+      <h2>📢 Sensibilisation opérateurs</h2>
+      <p class="hint" style="margin-top:-6px;">Message généré automatiquement à partir des non-conformités du quart, des alertes et des points récurrents à surveiller — rien à rédiger, prêt à transmettre à l'équipe.</p>
+      <button class="btn btn-dark btn-block" id="btnBuildAwareness" style="margin-top:10px;">🔄 Générer le message</button>
+      <div id="awarenessPreviewHost" style="margin-top:14px;"></div>
+      <div class="actions-menu" id="awarenessExportRow" style="display:none;margin-top:12px;">
+        <button class="btn btn-dark actions-menu-trigger" id="awarenessActionsTrigger">📤 Transmettre <span class="caret">▾</span></button>
+        <div class="actions-menu-dropdown" id="awarenessActionsDropdown">
+          <button class="actions-menu-item" id="btnAwarenessShareWA">📲 Partager sur WhatsApp / autre app</button>
+          <button class="actions-menu-item" id="btnAwarenessCopy">📋 Copier le texte</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ============ VIEW: SETTINGS / PARAMÈTRES ============ -->
   <section class="view" id="view-settings">
+    <div class="subnav" id="setNav">
+      <button data-setgrp="lists" class="on">Listes du formulaire</button>
+      <button data-setgrp="system">Sécurité et données</button>
+    </div>
     <div class="alert-box">⚙️ Personnalisez ici les listes utilisées dans les formulaires (produits, défauts, niveaux, classes, lignes). Les modifications sont enregistrées automatiquement sur cet appareil.</div>
 
-    <div class="card">
+    <div class="card" data-set="system">
+      <h2>🔐 Sécurité</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;" id="pinStatus"></p>
+      <div class="btn-row">
+        <button class="btn btn-dark" id="btnPinChange">🔑 Changer le code PIN</button>
+        <button class="btn btn-ghost" id="btnPinLock">🔒 Verrouiller maintenant</button>
+      </div>
+    </div>
+
+    <div class="card" data-set="system">
+      <h2>🔄 Mises à jour</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Version installée : <b id="curVersionLabel">v__APP_VERSION__</b></p>
+      <div id="updateCheckResult"></div>
+      <div class="btn-row"><button class="btn btn-ghost" id="btnCheckUpdate">🔍 Vérifier maintenant</button></div>
+    </div>
+
+    <div class="card" data-set="system">
+      <h2>💾 Espace de stockage utilisé</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Les photos sont conservées en haute qualité sur cet appareil (quart en cours + historique de tendance). Surveille cet indicateur si tu accumules beaucoup de contrôles sans exporter.</p>
+      <div id="storageUsageResult"><p class="hint">Calcul en cours…</p></div>
+      <div class="btn-row"><button class="btn btn-ghost" id="btnRefreshStorage">🔄 Actualiser</button></div>
+    </div>
+
+    <div class="card" data-set="system">
+      <h2>📊 Synchronisation tableau de bord (Google Sheets)</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Envoie automatiquement la synthèse de fin de quart (et le détail des non-conformités) vers un Google Sheets — voir le guide fourni pour la mise en place (5 minutes, gratuit).</p>
+      <div class="field">
+        <label>URL de synchronisation (Google Apps Script)</label>
+        <input type="text" id="syncUrlInput" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-dark" id="btnSaveSyncUrl">💾 Enregistrer</button>
+        <button class="btn btn-ghost" id="btnTestSync">🔧 Tester la connexion</button>
+      </div>
+      <div id="syncTestResult"></div>
+    </div>
+
+    <div class="card" data-set="system">
+      <h2>🔊 Alertes sonores</h2>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);text-transform:none;">
+          <input type="checkbox" id="soundAlertsToggle" checked style="width:18px;height:18px;">
+          Activer les sons (NC critique détectée, synchronisation réussie/échouée)
+        </label>
+      </div>
+    </div>
+
+    <div class="card" data-set="lists">
       <h2>🍾 Produits fabriqués</h2>
       <div id="settingsProduits"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddFamilleProduit">+ Nouvelle famille de produits</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🚨 Défauts / non-conformités</h2>
       <div id="settingsDefauts"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddCategorieDefaut">+ Nouvelle catégorie de défauts</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>📶 Niveaux de non-conformité</h2>
       <div id="settingsNiveaux"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddNiveau">+ Ajouter un niveau</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🏷️ Classes du défaut</h2>
       <div id="settingsClasses"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddClasse">+ Ajouter une classe</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
+      <h2>🏢 Sites</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Renseignez ici les sites de l'entreprise (ex : USINE BASSAM, USINE KOUMASSI). Chaque utilisateur choisit son site dans le formulaire de contrôle.</p>
+      <div id="settingsSites"></div>
+      <div class="btn-row"><button class="btn btn-ghost" id="btnAddSite">+ Ajouter un site</button></div>
+    </div>
+
+    <div class="card" data-set="lists">
       <h2>🏭 Lignes / machines</h2>
       <div id="settingsMachines"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddMachine">+ Ajouter une ligne / machine</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>💾 Sauvegarde du catalogue</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Exportez régulièrement votre catalogue personnalisé pour le réutiliser sur un autre appareil, ou pour le restaurer après réinitialisation.</p>
       <div class="btn-row">
@@ -727,17 +1077,49 @@ main{
 
 </main>
 
+<nav class="bottom-nav" id="mainNav" aria-label="Navigation principale">
+  <button class="tab-btn active" data-view="home"><span class="ni">🏠</span>Accueil</button>
+  <button class="tab-btn" data-view="form"><span class="ni">➕</span>Contrôle</button>
+  <button class="tab-btn" data-view="history"><span class="ni">📋</span>Historique <span class="tab-badge" id="histBadge" style="display:none">0</span></button>
+  <button class="tab-btn" data-view="synth" data-also="awareness"><span class="ni">📊</span>Rapports</button>
+  <button class="tab-btn" data-view="settings"><span class="ni">⚙️</span>Paramètres</button>
+</nav>
+
 <!-- ============ MODAL: single report preview ============ -->
 <div class="modal-bg" id="reportModal">
   <div class="modal-box">
     <button class="close-x" id="closeReportModal">✕</button>
     <div id="reportDocHost"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary" id="btnExportPNG">🖼️ Exporter en image</button>
-      <button class="btn btn-dark" id="btnExportPDF">📄 Exporter en PDF</button>
-      <button class="btn btn-ghost" id="btnShareWA">📲 Partager sur WhatsApp</button>
+      <button class="btn btn-dark btn-block" id="reportActionsTrigger">📤 Partager / Exporter</button>
     </div>
   </div>
+</div>
+
+<div class="modal-bg" id="photoChoiceModal">
+  <div class="modal-box photo-choice-box">
+    <h3>Ajouter une photo</h3>
+    <div class="photo-choice-actions">
+      <button type="button" class="btn btn-primary btn-block" id="photoChoiceCamera">📷 Prendre une photo</button>
+      <button type="button" class="btn btn-dark btn-block" id="photoChoiceGallery">🖼️ Choisir depuis la galerie</button>
+      <button type="button" class="btn btn-ghost btn-block" id="photoChoiceCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="exportSheet" style="z-index:120;align-items:flex-end;padding:0;">
+  <div class="modal-box" style="max-width:520px;border-radius:16px 16px 0 0;margin:0;padding:16px 16px 22px;">
+    <button class="close-x" id="exportSheetClose" aria-label="Fermer">✕</button>
+    <h3 id="exportSheetTitle" style="margin:0 0 4px;font-size:1.05rem;color:var(--dark2);">Partager / Exporter</h3>
+    <p class="hint" style="margin:0 0 12px;">1. Choisissez le format &nbsp; 2. Partagez ou enregistrez</p>
+    <div class="export-chips" id="exportChips"></div>
+    <div class="export-hint" id="exportFmtHint"></div>
+    <button class="btn btn-primary btn-block" id="exportDoShare">📤 Partager (WhatsApp, e-mail, Drive…)</button>
+    <button class="btn btn-ghost btn-block" id="exportDoSave" style="margin-top:8px;">💾 Enregistrer sur l'appareil</button>
+  </div>
+</div>
+<div class="modal-bg" id="pinModal">
+  <div class="modal-box pin-box"><div id="pinModalBody"></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1172,6 +1554,10 @@ var LOGO_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAA
 
 
 
+var APP_VERSION = "__APP_VERSION__"; // remplacé automatiquement lors de la compilation par le contenu du fichier VERSION à la racine du dépôt
+var GITHUB_OWNER = "gollydimbo-lgtm";  // à adapter si le dépôt est renommé / transféré
+var GITHUB_REPO  = "mibem-qhse-app";   // à adapter si le dépôt est renommé / transféré
+
 /* ===================== DONNÉES DE RÉFÉRENCE (issues des fichiers MIBEM) ===================== */
 
 var DEFAULT_MACHINES = [
@@ -1219,8 +1605,8 @@ var DEFAULT_PRODUITS = {
 
 // Jeux de paramètres contrôlés, spécifiques à chaque type d'emballage.
 // "Type de bouteille" est un cas particulier : ce n'est pas un statut conforme/NC,
-// mais un choix LOCALE / EXPORT (voir renderParamList / TYPE_BOUTEILLE_PARAM).
-var TYPE_BOUTEILLE_PARAM = "Type de bouteille (LOCALE/EXPORT)";
+// mais un choix LOCALE / IMPORT (voir renderParamList / TYPE_BOUTEILLE_PARAM).
+var TYPE_BOUTEILLE_PARAM = "Type de bouteille (LOCALE/IMPORT)";
 
 var PARAM_SETS = {
   "Brique": [
@@ -1230,8 +1616,7 @@ var PARAM_SETS = {
     "Format brique",
     "État du carton",
     "Poids brut (g)",
-    "Suivi pesée opérateur",
-    TYPE_BOUTEILLE_PARAM
+    "Suivi pesée opérateur"
   ],
   "Bouteille": [
     "Date (bouteille / carton)",
@@ -1398,6 +1783,7 @@ var DEFAULT_DEFAUTS = {
 
 var DEFAULT_NIVEAUX = ["Faible","Modéré","Élevé","Critique"];
 var DEFAULT_CLASSES = ["Mineure","Majeure","Critique"];
+var DEFAULT_SITES = ["USINE BASSAM","USINE KOUMASSI"];
 
 /* ===================== CATALOGUE MODIFIABLE (persisté localement) ===================== */
 var CATALOG_STORAGE_KEY = "mibem_qhse_catalog_v1";
@@ -1410,7 +1796,8 @@ function defaultCatalog(){
     produits: deepCopy(DEFAULT_PRODUITS),
     defauts: deepCopy(DEFAULT_DEFAUTS),
     niveaux: deepCopy(DEFAULT_NIVEAUX),
-    classes: deepCopy(DEFAULT_CLASSES)
+    classes: deepCopy(DEFAULT_CLASSES),
+    sites: deepCopy(DEFAULT_SITES)
   };
 }
 
@@ -1419,6 +1806,53 @@ function safeLocalStorageGet(key){
 }
 function safeLocalStorageSet(key, value){
   try{ window.localStorage.setItem(key, value); return true; }catch(e){ return false; }
+}
+
+/* ===================== STOCKAGE PERSISTANT DU QUART (IndexedDB) =====================
+   localStorage est plafonné à 5-10 Mo au total sur la plupart des appareils — avec
+   des photos en base64, cette limite est atteinte dès 2-3 contrôles, et les suivants
+   échouaient à s'enregistrer SILENCIEUSEMENT (aucune erreur visible, juste une perte
+   de données). IndexedDB permet des centaines de Mo et règle ce problème à la racine.
+   En cas d'indisponibilité d'IndexedDB (très rare), on retombe sur localStorage. */
+var IDB_NAME = "mibem_qhse_db";
+var IDB_VERSION = 1;
+var IDB_STORE = "mibem_store";
+var _idbPromise = null;
+
+function idbOpen(){
+  if(_idbPromise) return _idbPromise;
+  _idbPromise = new Promise(function(resolve, reject){
+    if(!window.indexedDB){ reject(new Error("IndexedDB indisponible sur cet appareil")); return; }
+    var req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = function(e){
+      var db = e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(){ reject(req.error || new Error("Erreur d'ouverture IndexedDB")); };
+  });
+  return _idbPromise;
+}
+function idbSet(key, value){
+  return idbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = function(){ resolve(true); };
+      tx.onerror = function(){ reject(tx.error); };
+      tx.onabort = function(){ reject(tx.error || new Error("Transaction IndexedDB annulée")); };
+    });
+  });
+}
+function idbGet(key){
+  return idbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(IDB_STORE, "readonly");
+      var req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  });
 }
 
 function loadCatalog(){
@@ -1432,7 +1866,8 @@ function loadCatalog(){
       produits: parsed.produits || base.produits,
       defauts: parsed.defauts || base.defauts,
       niveaux: (parsed.niveaux && parsed.niveaux.length) ? parsed.niveaux : base.niveaux,
-      classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes
+      classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes,
+      sites: (parsed.sites && parsed.sites.length) ? parsed.sites : base.sites
     };
   }catch(e){
     return defaultCatalog();
@@ -1451,28 +1886,63 @@ var state = {
   ncData: {},            // détails NC courants {label: {...}}
   terrainPhotos: [],     // photos preuves terrain du contrôle en cours [{src, caption}]
   synthPhotos: [],       // photos de la fiche de rapport papier jointes à la synthèse du quart
-  typeBouteille: "LOCALE", // valeur courante du champ Type de bouteille (LOCALE / EXPORT)
+  typeBouteille: "LOCALE", // valeur courante du champ Type de bouteille (LOCALE / IMPORT)
   editingId: null,       // si on édite un contrôle existant
+  _mibemAlbumId: null,   // identifiant de l'album photo natif "MIBEM QHSE" (Android), mis en cache
   nextId: 1
 };
 
 var SHIFT_STORAGE_KEY = "mibem_qhse_shift_v1";
+var _saveShiftTimer = null;
+
+/* Sauvegarde du quart en cours. Écriture regroupée (léger délai de 250ms) pour éviter
+   de multiplier les transactions IndexedDB lors de saisies rapprochées, sans jamais
+   retarder l'affichage : l'état est déjà en mémoire (state.*), seule la persistance
+   sur disque est différée de quelques millisecondes. */
 function saveShiftToStorage(){
-  safeLocalStorageSet(SHIFT_STORAGE_KEY, JSON.stringify({
+  var payload = {
     shiftControls: state.shiftControls,
     synthPhotos: state.synthPhotos,
     nextId: state.nextId
-  }));
+  };
+  clearTimeout(_saveShiftTimer);
+  _saveShiftTimer = setTimeout(function(){
+    idbSet(SHIFT_STORAGE_KEY, payload).catch(function(err){
+      console.error("Échec de sauvegarde IndexedDB, repli sur localStorage :", err);
+      try{
+        safeLocalStorageSet(SHIFT_STORAGE_KEY, JSON.stringify(payload));
+      }catch(e){
+        toast("⚠️ Stockage plein — exportez vos rapports puis démarrez un nouveau quart.");
+      }
+    });
+  }, 250);
 }
+
+/* Charge le quart en cours au démarrage. Retourne une Promise : l'appelant doit
+   attendre sa résolution avant d'afficher l'historique (voir DOMContentLoaded). */
 function loadShiftFromStorage(){
-  var raw = safeLocalStorageGet(SHIFT_STORAGE_KEY);
-  if(!raw) return;
-  try{
-    var parsed = JSON.parse(raw);
-    state.shiftControls = parsed.shiftControls || [];
-    state.synthPhotos = parsed.synthPhotos || [];
-    state.nextId = parsed.nextId || (state.shiftControls.length + 1);
-  }catch(e){}
+  function applyParsed(parsed){
+    state.shiftControls = (parsed && parsed.shiftControls) || [];
+    state.synthPhotos = (parsed && parsed.synthPhotos) || [];
+    state.nextId = (parsed && parsed.nextId) || (state.shiftControls.length + 1);
+  }
+  function fallbackToLocalStorage(){
+    var raw = safeLocalStorageGet(SHIFT_STORAGE_KEY);
+    if(!raw) return;
+    try{ applyParsed(JSON.parse(raw)); }catch(e){}
+  }
+  return idbGet(SHIFT_STORAGE_KEY).then(function(idbData){
+    if(idbData){ applyParsed(idbData); return; }
+    // Rien en IndexedDB : migration automatique depuis une ancienne version
+    // de l'app qui stockait tout dans localStorage.
+    var raw = safeLocalStorageGet(SHIFT_STORAGE_KEY);
+    if(raw){
+      try{ applyParsed(JSON.parse(raw)); saveShiftToStorage(); }catch(e){}
+    }
+  }).catch(function(err){
+    console.error("IndexedDB indisponible au chargement, repli sur localStorage :", err);
+    fallbackToLocalStorage();
+  });
 }
 
 /* ===================== UTILITAIRES ===================== */
@@ -1499,6 +1969,114 @@ function autoQuart(){
 }
 
 /* ===================== INITIALISATION DES SÉLECTEURS ===================== */
+/* ===================== RECHERCHE INCRÉMENTALE (listes longues : Machine, Produit, Défaut) =====================
+   Transforme un <select> avec beaucoup d'options en un champ de recherche : on tape, la
+   liste se filtre en direct, on clique/tape sur le résultat voulu. Le <select> d'origine
+   reste la source de vérité (valeur, événement "change"), donc toute la logique existante
+   continue de fonctionner sans modification. */
+function normalizeSearchText(s){
+  return (s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
+function enhanceSelectWithSearch(select, placeholder){
+  if(!select || select._searchEnhanced) return;
+  select._searchEnhanced = true;
+
+  var wrap = document.createElement("div");
+  wrap.className = "searchable-select-wrap";
+  select.parentNode.insertBefore(wrap, select);
+
+  var input = document.createElement("input");
+  input.type = "text";
+  input.className = "searchable-select-input";
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("inputmode", "search");
+  input.placeholder = placeholder || "Rechercher…";
+  wrap.appendChild(input);
+
+  var dropdown = document.createElement("div");
+  dropdown.className = "searchable-select-dropdown";
+  wrap.appendChild(dropdown);
+
+  wrap.appendChild(select);
+  select.classList.add("searchable-select-native");
+
+  function optionsData(){
+    var data = [];
+    Array.prototype.forEach.call(select.children, function(node){
+      if(node.tagName === "OPTGROUP"){
+        Array.prototype.forEach.call(node.children, function(opt){
+          data.push({value:opt.value, label:opt.textContent, group:node.label});
+        });
+      } else if(node.tagName === "OPTION"){
+        data.push({value:node.value, label:node.textContent, group:null});
+      }
+    });
+    return data;
+  }
+
+  function syncInputFromSelect(){
+    var opt = select.options[select.selectedIndex];
+    input.value = opt ? opt.textContent : "";
+  }
+
+  function closeDropdown(){
+    dropdown.classList.remove("show");
+  }
+
+  function renderDropdown(filterText){
+    var data = optionsData();
+    var nf = normalizeSearchText(filterText);
+    var filtered = nf ? data.filter(function(o){ return normalizeSearchText(o.label).indexOf(nf) !== -1; }) : data;
+    dropdown.innerHTML = "";
+    if(filtered.length === 0){
+      dropdown.innerHTML = '<div class="ssd-empty">Aucun résultat</div>';
+      dropdown.classList.add("show");
+      return;
+    }
+    var lastGroup;
+    filtered.forEach(function(o){
+      if(o.group !== lastGroup){
+        if(o.group){
+          var gEl = document.createElement("div");
+          gEl.className = "ssd-group";
+          gEl.textContent = o.group;
+          dropdown.appendChild(gEl);
+        }
+        lastGroup = o.group;
+      }
+      var item = document.createElement("div");
+      item.className = "ssd-item";
+      item.textContent = o.label;
+      item.addEventListener("mousedown", function(e){
+        e.preventDefault();
+        select.value = o.value;
+        syncInputFromSelect();
+        closeDropdown();
+        select.dispatchEvent(new Event("change"));
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.classList.add("show");
+  }
+
+  input.addEventListener("focus", function(){ renderDropdown(""); input.select(); });
+  input.addEventListener("input", function(){ renderDropdown(input.value); });
+  input.addEventListener("blur", function(){
+    setTimeout(function(){ closeDropdown(); syncInputFromSelect(); }, 150);
+  });
+  input.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){ closeDropdown(); input.blur(); }
+  });
+
+  select.addEventListener("change", syncInputFromSelect);
+  // Si le code (catalogue, réinitialisation du formulaire...) reconstruit les <option>,
+  // on garde le champ de recherche synchronisé automatiquement.
+  new MutationObserver(syncInputFromSelect).observe(select, {childList:true});
+
+  syncInputFromSelect();
+}
+
 function fillMachineSelect(){
   var sel = $("#f-machine");
   sel.innerHTML = "";
@@ -1519,6 +2097,22 @@ function fillMachineSelect(){
     });
     sel.appendChild(og);
   });
+}
+var USER_SITE_KEY = "mibem_qhse_user_site_v1";
+function fillSiteSelect(){
+  var sel = $("#f-site");
+  if(!sel) return;
+  var current = sel.value || safeLocalStorageGet(USER_SITE_KEY) || "";
+  sel.innerHTML = "";
+  var sites = (state.catalog.sites && state.catalog.sites.length) ? state.catalog.sites : DEFAULT_SITES;
+  sites.forEach(function(s){
+    var o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  if(current && sites.indexOf(current) !== -1){
+    sel.value = current;
+  }
 }
 function fillProduitSelect(){
   var sel = $("#f-produit");
@@ -1566,7 +2160,8 @@ function resetParamStatus(){
     if(state.paramStatus[p].status === "nc"){
       state.ncData[p] = oldNc[p] || {
         description:"", niveau: (state.catalog.niveaux[0]||"Faible"), defaut:"", quantite:"", classeDefaut:(state.catalog.classes[0]||"Mineure"),
-        actionImmediate:"", ncTraitee:"Non", clotureDetails:"", cause:"", photos:[]
+        actionImmediate:"", ncTraitee:"Non", clotureDetails:"", cause:"", photos:[],
+        actionPreventive:"", verifEfficacite:"À vérifier"
       };
     }
   });
@@ -1584,7 +2179,7 @@ function renderParamList(){
         '<div class="param-name">✅ '+escapeHtml(p)+'</div>'+
         '<select class="type-bouteille-select" style="max-width:140px;padding:7px 8px;border-radius:8px;border:1.5px solid var(--line);font-weight:700;">'+
           '<option value="LOCALE" '+(state.typeBouteille==="LOCALE"?"selected":"")+'>LOCALE</option>'+
-          '<option value="EXPORT" '+(state.typeBouteille==="EXPORT"?"selected":"")+'>EXPORT</option>'+
+          '<option value="IMPORT" '+(state.typeBouteille==="IMPORT"?"selected":"")+'>IMPORT</option>'+
         '</select>';
       host.appendChild(row);
       return;
@@ -1622,10 +2217,12 @@ function toggleParam(p){
       defaut:"",               // DEFAUTS
       quantite:"",             // (complément) quantité concernée
       classeDefaut:(state.catalog.classes[0]||"Mineure"), // CLASSE DU DEFAUTS
-      actionImmediate:"",     // ACTION IMMEDIAT
+      actionImmediate:"",     // ACTION IMMEDIAT (confinement)
       ncTraitee:"Non",         // NC TRAITEE
       clotureDetails:"",       // (complément) précisions si traitée
       cause:"",                 // CAUSES DE LA NON-CONFORMITE
+      actionPreventive:"",     // ACTION PRÉVENTIVE — évite la récurrence (boucle CAPA ISO 9001 §10.2)
+      verifEfficacite:"À vérifier", // VÉRIFICATION D'EFFICACITÉ — À vérifier / Efficace / Non efficace (récidive)
       photos:[]
     };
   }
@@ -1675,18 +2272,25 @@ function attachBulletPrefix(el){
   });
 }
 
+/* Bouton photo unique : au tap, propose le choix Caméra / Galerie via une petite fenêtre,
+   au lieu d'afficher deux boutons séparés en permanence. */
 function photoInputPairHtml(cls, dataP){
   var dp = dataP!=null ? ' data-p="'+escapeHtml(dataP)+'"' : '';
   return (
-    '<div class="photo-input-row">'+
-      '<label class="btn btn-ghost photo-btn">📷 Prendre une photo'+
-        '<input type="file" accept="image/*" capture="environment" class="'+cls+'-camera" multiple'+dp+' style="display:none">'+
-      '</label>'+
-      '<label class="btn btn-ghost photo-btn">🖼️ Choisir depuis la galerie'+
-        '<input type="file" accept="image/*" class="'+cls+'-gallery" multiple'+dp+' style="display:none">'+
-      '</label>'+
+    '<div class="photo-single-wrap">'+
+      '<button type="button" class="btn btn-ghost photo-single-btn">📷 Ajouter une photo</button>'+
+      '<input type="file" accept="image/*" capture="environment" class="'+cls+'-camera" multiple'+dp+' style="display:none">'+
+      '<input type="file" accept="image/*" class="'+cls+'-gallery" multiple'+dp+' style="display:none">'+
     '</div>'
   );
+}
+
+var _pendingPhotoCameraInput = null, _pendingPhotoGalleryInput = null;
+function openPhotoChoiceSheet(cameraInput, galleryInput){
+  _pendingPhotoCameraInput = cameraInput;
+  _pendingPhotoGalleryInput = galleryInput;
+  var modal = $("#photoChoiceModal");
+  if(modal) modal.classList.add("show");
 }
 
 function renderNcBlocks(){
@@ -1698,7 +2302,7 @@ function renderNcBlocks(){
     var d = state.ncData[p];
     var block = document.createElement("div");
     block.className = "card nc-block";
-    var photosHtml = (d.photos||[]).map(function(src){ return '<img src="'+src+'">'; }).join("");
+    var photosHtml = (d.photos||[]).map(function(p){ return '<img src="'+(p.thumb||p.src)+'">'; }).join("");
     var clotureRow = d.ncTraitee === "Oui"
       ? '<input type="text" class="nc-cloture" data-p="'+escapeHtml(p)+'" value="'+escapeHtml(d.clotureDetails||"")+'" placeholder="Précisions : date / par qui ?" style="margin-top:8px;">'
       : '';
@@ -1743,6 +2347,17 @@ function renderNcBlocks(){
         '<textarea class="nc-cause" data-p="'+escapeHtml(p)+'" placeholder="ex : usure sertisseuse... (Entrée = nouvelle puce 🚨)">'+escapeHtml(d.cause||"")+'</textarea>'+
       '</div>'+
 
+      '<div class="field"><label>9 · Action préventive (évite la récidive)</label>'+
+        '<textarea class="nc-action-prev" data-p="'+escapeHtml(p)+'" placeholder="ex : plan de maintenance préventive de la sertisseuse... (Entrée = nouvelle puce 🚨)">'+escapeHtml(d.actionPreventive||"")+'</textarea>'+
+      '</div>'+
+
+      '<div class="field"><label>10 · Vérification d\'efficacité</label>'+
+        '<select class="nc-verif-efficacite" data-p="'+escapeHtml(p)+'">'+
+          ["À vérifier","Efficace","Non efficace — récidive"].map(function(g){ return '<option '+(d.verifEfficacite===g?"selected":"")+'>'+g+'</option>'; }).join("")+
+        '</select>'+
+        '<p class="hint" style="margin-top:4px;">À contrôler au prochain quart : le défaut a-t-il réapparu malgré l\'action préventive ?</p>'+
+      '</div>'+
+
       '<div class="field"><label>Photo(s) jointe(s)</label>'+
         photoInputPairHtml("nc-photo", p)+
         '<div class="photo-preview">'+photosHtml+'</div>'+
@@ -1750,7 +2365,7 @@ function renderNcBlocks(){
     host.appendChild(block);
   });
 
-  $all(".nc-description,.nc-action,.nc-cause").forEach(attachBulletPrefix);
+  $all(".nc-description,.nc-action,.nc-cause,.nc-action-prev").forEach(attachBulletPrefix);
 
   $all(".nc-description").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].description = el.value; });
@@ -1760,12 +2375,16 @@ function renderNcBlocks(){
   });
   $all(".nc-defaut").forEach(function(el){
     el.addEventListener("change", function(){ state.ncData[el.dataset.p].defaut = el.value; });
+    enhanceSelectWithSearch(el, "Rechercher un défaut…");
   });
   $all(".nc-qte").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].quantite = el.value; });
   });
   $all(".nc-classe").forEach(function(el){
-    el.addEventListener("change", function(){ state.ncData[el.dataset.p].classeDefaut = el.value; });
+    el.addEventListener("change", function(){
+      state.ncData[el.dataset.p].classeDefaut = el.value;
+      if(el.value === "Critique"){ playAlertCritical(); toast("🚨 Non-conformité CRITIQUE enregistrée"); }
+    });
   });
   $all(".nc-action").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].actionImmediate = el.value; });
@@ -1782,10 +2401,19 @@ function renderNcBlocks(){
   $all(".nc-cause").forEach(function(el){
     el.addEventListener("input", function(){ state.ncData[el.dataset.p].cause = el.value; });
   });
+  $all(".nc-action-prev").forEach(function(el){
+    el.addEventListener("input", function(){ state.ncData[el.dataset.p].actionPreventive = el.value; });
+  });
+  $all(".nc-verif-efficacite").forEach(function(el){
+    el.addEventListener("change", function(){
+      state.ncData[el.dataset.p].verifEfficacite = el.value;
+      if(el.value.indexOf("Non efficace") === 0){ playAlertCritical(); toast("🚨 Action corrective jugée inefficace — récidive à traiter en priorité"); }
+    });
+  });
   $all(".nc-photo-camera,.nc-photo-gallery").forEach(function(el){
     el.addEventListener("change", function(){
       var p = el.dataset.p;
-      handlePhotoFilesInput(el, {push:function(item){ state.ncData[p].photos.push(item.src); }}, renderNcBlocks);
+      handlePhotoFilesInput(el, {push:function(item){ state.ncData[p].photos.push(item); }}, renderNcBlocks);
     });
   });
 }
@@ -1803,7 +2431,7 @@ function renderPhotoGrid(hostEl, arr, onChange, large){
     var div = document.createElement("div");
     div.className = "photo-item";
     div.innerHTML =
-      '<img src="'+p.src+'">'+
+      '<img src="'+(p.thumb||p.src)+'">'+
       '<input type="text" class="pg-caption" data-idx="'+idx+'" placeholder="Légende" value="'+escapeHtml(p.caption)+'">'+
       '<button type="button" class="pg-del" data-idx="'+idx+'">🗑️ Retirer</button>';
     hostEl.appendChild(div);
@@ -1821,20 +2449,79 @@ function renderTerrainPhotos(){
 function renderSynthPhotos(){
   saveShiftToStorage();
   renderPhotoGrid($("#synthPhotoList"), state.synthPhotos, renderSynthPhotos, true);
+  // Le bloc d'aperçu/export (#synthDocWrap) est généré une fois à l'ouverture de l'onglet
+  // et ne se met pas à jour tout seul — sans ce rafraîchissement, la photo ajoutée
+  // n'apparaît jamais dans le rapport exporté tant que l'onglet n'est pas rouvert.
+  if($("#synthPreviewHost") && $("#synthPreviewHost").innerHTML.trim()) renderSynthPreview();
+}
+
+/* Redimensionne une photo côté client avant stockage : conserve une très haute
+   qualité visuelle (jusqu'à 2200 px de long côté, JPEG qualité 0.95 — étiquettes,
+   marquages de lot et écrans de balance restent nets et lisibles, y compris après
+   la compression que WhatsApp applique à ses propres pièces jointes) tout en
+   évitant les photos
+   brutes de smartphone (parfois 4000×3000 px / plusieurs Mo) qui surchargent
+   le moteur de rendu des rapports (cause du flou / des blocages / des échecs
+   silencieux de sauvegarde locale). */
+function resizeImageDataUrl(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var outW = Math.max(1, Math.round(w * scale));
+        var outH = Math.max(1, Math.round(h * scale));
+        var canvas = document.createElement("canvas");
+        canvas.width = outW;
+        canvas.height = outH;
+        var ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, outW, outH);
+        try{
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        }catch(err){
+          reject(err);
+        }
+      };
+      img.onerror = function(){ reject(new Error("image invalide")); };
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function handlePhotoFilesInput(input, arr, onDone){
   var files = Array.prototype.slice.call(input.files || []);
   if(!files.length) return;
-  var remaining = files.length;
-  files.forEach(function(file){
-    var reader = new FileReader();
-    reader.onload = function(e){
-      arr.push({src:e.target.result, caption:""});
-      remaining--;
-      if(remaining === 0){ onDone(); input.value=""; }
-    };
-    reader.readAsDataURL(file);
+  if(files.length > 1) toast("Traitement de "+files.length+" photos...");
+  Promise.all(files.map(function(file){
+    // Deux versions générées à la capture : "src" en pleine résolution (conservée,
+    // pour un usage futur en plein écran) et "thumb" beaucoup plus légère, utilisée
+    // pour l'affichage en galerie dans les rapports. Recharger une image 2200px en
+    // mémoire pour chaque vignette d'une galerie (jusqu'à 4 par ligne) lors d'un export
+    // PDF/PNG a fait planter l'application sur certains téléphones Android (mémoire
+    // insuffisante pour le WebView) — la vignette légère élimine ce risque.
+    return Promise.all([
+      resizeImageDataUrl(file, 2200, 0.95),
+      resizeImageDataUrl(file, 700, 0.78)
+    ]).catch(function(){
+      // Repli : si le redimensionnement échoue pour une raison quelconque,
+      // on garde la photo d'origine plutôt que de la perdre (thumb = même image).
+      return new Promise(function(resolve){
+        var reader = new FileReader();
+        reader.onload = function(e){ resolve([e.target.result, e.target.result]); };
+        reader.readAsDataURL(file);
+      });
+    });
+  })).then(function(results){
+    results.forEach(function(pair){ arr.push({src:pair[0], thumb:pair[1], caption:""}); });
+    onDone();
+    input.value = "";
   });
 }
 function handleTerrainPhotoInput(input){ handlePhotoFilesInput(input, state.terrainPhotos, renderTerrainPhotos); }
@@ -1907,6 +2594,7 @@ function readFormAsControl(){
     famille: produitOpt ? produitOpt.dataset.famille : "",
     lot: $("#f-lot").value,
     controleur: $("#f-controleur").value || "GOLLY",
+    site: $("#f-site") ? $("#f-site").value : "",
     parametres: parametres,
     paramOrder: activeList.filter(function(p){ return p !== TYPE_BOUTEILLE_PARAM; }),
     typeBouteille: hasTypeBouteille ? state.typeBouteille : null,
@@ -1922,6 +2610,8 @@ function loadControlIntoForm(ctrl){
   setQuart(ctrl.quart);
   $("#f-quart-custom").value = ["06h-14h","14h-22h","22h-06h"].indexOf(ctrl.quart)===-1 ? ctrl.quart : "";
   $("#f-controleur").value = ctrl.controleur;
+  fillSiteSelect();
+  if(ctrl.site && $("#f-site")) $("#f-site").value = ctrl.site;
   fillMachineSelect();
   fillProduitSelect();
   $("#f-machine").value = ctrl.ligne;
@@ -1950,19 +2640,33 @@ function worstStatus(ctrl){
   return worst;
 }
 
+var _savingControl = false;
 function saveControl(){
-  if(!$("#f-machine").value || !$("#f-produit").value){
-    toast("Merci de sélectionner une ligne et un produit.");
-    return;
+  // Verrou anti-double-soumission : un double-tap accidentel (fréquent sur mobile)
+  // appelait deux fois cette fonction avant le premier rendu, générant deux
+  // contrôles distincts en doublon (chacun avec un id différent) — ce qui faussait
+  // silencieusement les statistiques (taux de conformité, tendances multi-quarts).
+  if(_savingControl) return;
+  _savingControl = true;
+  try{
+    if(!$("#f-machine").value || !$("#f-produit").value){
+      toast("Merci de sélectionner une ligne et un produit.");
+      return;
+    }
+    var ctrl = readFormAsControl();
+    var idx = state.shiftControls.findIndex(function(c){ return c.id === ctrl.id; });
+    if(idx >= 0){ state.shiftControls[idx] = ctrl; toast("Contrôle mis à jour."); }
+    else { state.shiftControls.push(ctrl); toast("Contrôle enregistré ✔ (hors ligne, sauvegardé sur l'appareil)"); }
+    renderHistory();
+    updateBadges();
+    resetForm(true);
+    showView("history");
+  }catch(err){
+    console.error("Erreur lors de l'enregistrement du contrôle :", err);
+    toast("⚠️ Erreur lors de l'enregistrement — le contrôle n'a peut-être pas été sauvegardé. Réessayez.");
+  }finally{
+    setTimeout(function(){ _savingControl = false; }, 600);
   }
-  var ctrl = readFormAsControl();
-  var idx = state.shiftControls.findIndex(function(c){ return c.id === ctrl.id; });
-  if(idx >= 0){ state.shiftControls[idx] = ctrl; toast("Contrôle mis à jour."); }
-  else { state.shiftControls.push(ctrl); toast("Contrôle enregistré ✔"); }
-  renderHistory();
-  updateBadges();
-  resetForm(true);
-  showView("history");
 }
 
 function deleteControl(id){
@@ -2018,90 +2722,554 @@ function updateBadges(){
   var ncTotal = 0;
   state.shiftControls.forEach(function(c){ ncTotal += Object.keys(c.nc).length; });
   $("#sessionPill").textContent = n + " contrôle(s) · " + ncTotal + " NC";
+  if(typeof renderHome === "function") renderHome();
 }
 
 /* ===================== NAVIGATION ===================== */
+/* ===================== CODE PIN — accès aux Paramètres =====================
+   Le PIN protège l'écran Paramètres (sites, produits, défauts, synchronisation…) contre
+   les modifications accidentelles ou non autorisées par un autre opérateur.
+   Stockage : seul un condensé SHA-256 salé du PIN est conservé (jamais le PIN lui-même),
+   ainsi que celui d'un code de secours affiché une seule fois à la création.
+   Après 5 échecs, l'accès est bloqué temporairement (durée croissante). */
+var PIN_KEY = "mibem_qhse_pin_v1";
+var PIN_SESSION_MS = 5*60*1000;   // déverrouillage pendant l'utilisation des Paramètres
+var PIN_GRACE_MS = 60*1000;       // délai de grâce après avoir quitté les Paramètres
+var _pinUnlockedUntil = 0;
+var _pinMode = "enter";
+var _pinAfterGrant = null;
+var _pinPending = null;           // enregistrement en cours de création (avant confirmation)
+var _pinRecovering = false;
+
+function sha256Js(bytes){
+  var K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var l = bytes.length, bitLen = l*8;
+  var padLen = ((l + 9 + 63) >> 6) << 6;
+  var buf = new Uint8Array(padLen);
+  buf.set(bytes); buf[l] = 0x80;
+  var dv = new DataView(buf.buffer);
+  dv.setUint32(padLen-8, Math.floor(bitLen/0x100000000), false);
+  dv.setUint32(padLen-4, bitLen>>>0, false);
+  var w = new Uint32Array(64);
+  function rotr(x,n){ return (x>>>n) | (x<<(32-n)); }
+  for(var off=0; off<padLen; off+=64){
+    for(var i=0;i<16;i++) w[i] = dv.getUint32(off+i*4, false);
+    for(i=16;i<64;i++){
+      var s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15]>>>3);
+      var s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2]>>>10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(i=0;i<64;i++){
+      var S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+      var ch = (e & f) ^ (~e & g);
+      var t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      var S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+      var mj = (a & b) ^ (a & c) ^ (b & c);
+      var t2 = (S0 + mj) | 0;
+      h=g; g=f; f=e; e=(d + t1) | 0; d=c; c=b; b=a; a=(t1 + t2) | 0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  return H.map(function(x){ return ("00000000" + (x>>>0).toString(16)).slice(-8); }).join("");
+}
+function sha256Hex(text){
+  var data = new TextEncoder().encode(text);
+  if(window.crypto && window.crypto.subtle && window.crypto.subtle.digest){
+    return window.crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    }).catch(function(){ return sha256Js(data); });
+  }
+  return Promise.resolve(sha256Js(data));
+}
+function randomBytes(n){
+  var a = new Uint8Array(n);
+  (window.crypto || window.msCrypto).getRandomValues(a);
+  return a;
+}
+function randomHex(n){
+  return Array.prototype.map.call(randomBytes(n), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+}
+function newRecoveryCode(){
+  var alpha = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", a = randomBytes(10), s = "";
+  for(var i=0;i<10;i++) s += alpha.charAt(a[i] % alpha.length);
+  return s.slice(0,5) + "-" + s.slice(5);
+}
+function normRecovery(code){ return String(code||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase(); }
+function hashPin(pin, salt){ return sha256Hex(salt + ":pin:" + pin); }
+function hashRecovery(code, salt){ return sha256Hex(salt + ":rec:" + normRecovery(code)); }
+function pinIsWeak(pin){
+  return /^(\d)\1+$/.test(pin) || "0123456789".indexOf(pin) !== -1 || "9876543210".indexOf(pin) !== -1;
+}
+function loadPinRecord(){
+  var raw = safeLocalStorageGet(PIN_KEY);
+  if(!raw) return null;
+  try{ var r = JSON.parse(raw); return (r && r.hash && r.salt && r.rec) ? r : null; }catch(e){ return null; }
+}
+function savePinRecord(r){ safeLocalStorageSet(PIN_KEY, JSON.stringify(r)); }
+function pinIsUnlocked(){ return Date.now() < _pinUnlockedUntil; }
+function pinTouch(){ if(pinIsUnlocked()) _pinUnlockedUntil = Date.now() + PIN_SESSION_MS; }
+
+function verifyPin(pin){
+  var rec = loadPinRecord();
+  if(!rec) return Promise.resolve({ok:false, msg:"Aucun code PIN défini."});
+  var now = Date.now();
+  if(rec.lockUntil && rec.lockUntil > now){
+    return Promise.resolve({ok:false, msg:"Trop d'essais. Réessayez dans "+Math.ceil((rec.lockUntil-now)/1000)+" s."});
+  }
+  return hashPin(pin, rec.salt).then(function(h){
+    if(h === rec.hash){ rec.fails = 0; rec.lockUntil = 0; savePinRecord(rec); return {ok:true}; }
+    rec.fails = (rec.fails||0) + 1;
+    var msg = "PIN incorrect.";
+    if(rec.fails % 5 === 0){
+      var wait = Math.min(900, 30 * Math.pow(2, Math.floor(rec.fails/5) - 1));
+      rec.lockUntil = Date.now() + wait*1000;
+      msg = "PIN incorrect. Accès bloqué pendant "+wait+" s.";
+    } else {
+      msg += " Encore "+(5 - (rec.fails % 5))+" essai(s) avant blocage.";
+    }
+    savePinRecord(rec);
+    return {ok:false, msg:msg};
+  });
+}
+
+function pinGrant(){
+  _pinUnlockedUntil = Date.now() + PIN_SESSION_MS;
+  closePinModal();
+  var cb = _pinAfterGrant; _pinAfterGrant = null;
+  renderPinStatus();
+  if(cb) cb();
+}
+function closePinModal(){
+  var m = $("#pinModal");
+  if(m) m.classList.remove("show");
+  _pinPending = null; _pinRecovering = false;
+}
+function lockSettings(){
+  _pinUnlockedUntil = 0;
+  var v = $("#view-settings");
+  if(v && v.classList.contains("active")) showView("form");
+}
+function requestSettingsAccess(afterGrant){
+  if(pinIsUnlocked()){ pinTouch(); if(afterGrant) afterGrant(); return; }
+  _pinAfterGrant = afterGrant || null;
+  openPinModal(loadPinRecord() ? "enter" : "create");
+}
+function openPinModal(mode){
+  _pinMode = mode;
+  renderPinModal();
+  $("#pinModal").classList.add("show");
+  setTimeout(function(){ var i = $("#pinModal input:not([type=checkbox])"); if(i) i.focus(); }, 80);
+}
+function pinMsg(text){ var m = $("#pinMsg"); if(m) m.textContent = text || ""; }
+function renderPinModal(){
+  var body = $("#pinModalBody");
+  var digits = 'type="password" inputmode="numeric" autocomplete="off" maxlength="6" class="pin-input"';
+  var html = "";
+  if(_pinMode === "enter"){
+    html = '<h3>🔐 Accès aux Paramètres</h3><p>Saisissez votre code PIN pour modifier les paramètres.</p>'+
+      '<input '+digits+' id="pinInput" placeholder="••••">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="cancel">Annuler</button><button class="btn btn-primary" data-pin="enter">Valider</button></div>'+
+      '<button class="pin-link" data-pin="forgot">PIN oublié ?</button>';
+  } else if(_pinMode === "create" || _pinMode === "change"){
+    var isChange = _pinMode === "change";
+    html = '<h3>'+(isChange ? '🔑 Changer le code PIN' : (_pinRecovering ? '🔑 Nouveau code PIN' : '🔐 Créer un code PIN'))+'</h3>'+
+      '<p>Ce code protège les Paramètres (sites, produits, défauts…). Choisissez 4 à 6 chiffres.</p>'+
+      (isChange ? '<input '+digits+' id="pinCur" placeholder="PIN actuel">' : '')+
+      '<input '+digits+' id="pinNew" placeholder="Nouveau PIN">'+
+      '<input '+digits+' id="pinNew2" placeholder="Confirmer le PIN">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="cancel">Annuler</button><button class="btn btn-primary" data-pin="create">Continuer</button></div>';
+  } else if(_pinMode === "recoveryShow"){
+    html = '<h3>📝 Code de secours</h3>'+
+      '<p>Notez ce code sur papier et gardez-le en lieu sûr. Il permet de recréer un PIN si vous l\'oubliez. <b>Il ne sera plus affiché.</b></p>'+
+      '<div class="pin-code-box" id="pinRecCode"></div>'+
+      '<label class="pin-check"><input type="checkbox" id="pinRecOk"><span>J\'ai noté ce code de secours.</span></label>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="copyrec">📋 Copier</button><button class="btn btn-primary" id="pinRecDone" data-pin="recdone" disabled>Terminer</button></div>';
+  } else if(_pinMode === "recover"){
+    html = '<h3>🆘 PIN oublié</h3><p>Saisissez le code de secours noté à la création du PIN.</p>'+
+      '<input type="text" autocomplete="off" maxlength="12" class="pin-input" style="letter-spacing:.2em;font-size:1.2rem;" id="pinRecInput" placeholder="XXXXX-XXXXX">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="back">Retour</button><button class="btn btn-primary" data-pin="recover">Valider</button></div>';
+  }
+  body.innerHTML = html;
+  if(_pinMode === "recoveryShow" && _pinPending){ $("#pinRecCode").textContent = _pinPending.code; }
+}
+
+function handlePinAction(act){
+  var rec = loadPinRecord();
+  if(act === "cancel"){ closePinModal(); _pinAfterGrant = null; return; }
+  if(act === "forgot"){ openPinModal("recover"); return; }
+  if(act === "back"){ openPinModal("enter"); return; }
+  if(act === "copyrec"){
+    if(_pinPending) copyTextToClipboard(_pinPending.code).then(function(){ toast("Code de secours copié ✔"); });
+    return;
+  }
+  if(act === "enter"){
+    var v = ($("#pinInput").value || "").trim();
+    verifyPin(v).then(function(res){
+      if(res.ok) pinGrant();
+      else { pinMsg(res.msg); var i = $("#pinInput"); if(i){ i.value = ""; i.focus(); } }
+    });
+    return;
+  }
+  if(act === "recover"){
+    if(!rec){ openPinModal("create"); return; }
+    hashRecovery($("#pinRecInput").value, rec.salt).then(function(h){
+      if(h === rec.rec){ _pinRecovering = true; openPinModal("create"); }
+      else pinMsg("Code de secours incorrect.");
+    });
+    return;
+  }
+  if(act === "create"){
+    var isChange = _pinMode === "change";
+    var n1 = ($("#pinNew").value || "").trim(), n2 = ($("#pinNew2").value || "").trim();
+    var proceed = function(){
+      if(!/^\d{4,6}$/.test(n1)){ pinMsg("Le PIN doit contenir 4 à 6 chiffres."); return; }
+      if(pinIsWeak(n1)){ pinMsg("PIN trop simple (ex. 0000, 1234). Choisissez-en un autre."); return; }
+      if(n1 !== n2){ pinMsg("Les deux saisies ne correspondent pas."); return; }
+      var salt = randomHex(16), code = newRecoveryCode();
+      Promise.all([hashPin(n1, salt), hashRecovery(code, salt)]).then(function(r){
+        _pinPending = {record:{salt:salt, hash:r[0], rec:r[1], fails:0, lockUntil:0}, code:code};
+        openPinModal("recoveryShow");
+      });
+    };
+    if(isChange){
+      verifyPin(($("#pinCur").value || "").trim()).then(function(res){
+        if(res.ok) proceed(); else pinMsg(res.msg);
+      });
+    } else proceed();
+    return;
+  }
+  if(act === "recdone"){
+    if(!_pinPending) return;
+    savePinRecord(_pinPending.record);
+    var wasChange = !!rec && !_pinRecovering && !_pinAfterGrant;
+    _pinPending = null;
+    toast(wasChange ? "Code PIN modifié ✔" : "Code PIN enregistré ✔");
+    pinGrant();
+    return;
+  }
+}
+
+function renderPinStatus(){
+  var el = $("#pinStatus");
+  if(!el) return;
+  el.textContent = loadPinRecord()
+    ? "✅ Un code PIN protège l'accès à cette section. Elle se reverrouille quand vous la quittez."
+    : "⚠️ Aucun code PIN défini : créez-en un pour protéger les paramètres.";
+}
+
+function wirePin(){
+  var modal = $("#pinModal");
+  modal.addEventListener("click", function(e){
+    var b = e.target.closest("[data-pin]");
+    if(b){ handlePinAction(b.dataset.pin); return; }
+    if(e.target === modal){ closePinModal(); _pinAfterGrant = null; }
+  });
+  modal.addEventListener("change", function(e){
+    if(e.target.id === "pinRecOk"){ $("#pinRecDone").disabled = !e.target.checked; }
+  });
+  modal.addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    var primary = modal.querySelector(".btn-primary:not([disabled])");
+    if(primary){ e.preventDefault(); handlePinAction(primary.dataset.pin); }
+  });
+  $("#btnPinChange").addEventListener("click", function(){
+    if(!loadPinRecord()){ _pinAfterGrant = null; openPinModal("create"); }
+    else openPinModal("change");
+  });
+  $("#btnPinLock").addEventListener("click", function(){
+    lockSettings();
+    toast("Paramètres verrouillés 🔒");
+  });
+  // Toute interaction dans les Paramètres prolonge la session déverrouillée.
+  var sv = $("#view-settings");
+  ["click","input","keydown","touchstart"].forEach(function(ev){ sv.addEventListener(ev, pinTouch, true); });
+  // Verrouillage dès que l'application passe en arrière-plan.
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+      _pinUnlockedUntil = 0;
+      if(sv.classList.contains("active")) showView("form");
+    }
+  });
+  // Verrouillage automatique après inactivité.
+  setInterval(function(){
+    if(sv.classList.contains("active") && !pinIsUnlocked()) showView("form");
+  }, 15000);
+  renderPinStatus();
+}
+
+/* ===================== ACCUEIL + RAPPORTS (organisation) ===================== */
+function renderHome(){
+  if(!$("#homeN")) return;
+  var list = state.shiftControls, n = list.length, ncTotal = 0, okCount = 0;
+  list.forEach(function(c){ var k = Object.keys(c.nc||{}).length; ncTotal += k; if(k === 0) okCount++; });
+  $("#homeN").textContent = n;
+  $("#homeNC").textContent = ncTotal;
+  $("#homeRate").textContent = n ? Math.round(okCount*100/n) + " %" : "—";
+  var h = new Date().getHours();
+  $("#homeTitle").textContent = (h < 18 ? "Bonjour" : "Bonsoir");
+  $("#homeSub").textContent = "MIBEM COMPANY — " + (n ? "quart en cours" : "aucun contrôle enregistré pour ce quart");
+  var host = $("#homeRecent");
+  if(!n){ host.innerHTML = '<div class="empty-state">Aucun contrôle pour l\'instant.<br>Touchez « Nouveau contrôle » pour commencer.</div>'; return; }
+  host.innerHTML = list.slice(-3).reverse().map(function(c){
+    var k = Object.keys(c.nc||{}).length;
+    return '<div class="history-item" data-goto="history"><div class="status-bar '+(k?'nc':'ok')+'"></div><div class="hi-main">'+
+      '<div class="hi-title">'+escapeHtml(c.heure)+' — '+escapeHtml(c.ligne)+'</div>'+
+      '<div class="hi-sub">'+escapeHtml(c.produit)+' · Lot '+escapeHtml(c.lot||"—")+'</div>'+
+      '<div class="hi-sub">'+(k ? ("🚨 "+k+" NC") : "✅ Aucune NC")+'</div></div></div>';
+  }).join("");
+}
+var _rapCurrent = "synth";
+function showRap(key){
+  _rapCurrent = key;
+  if(key === "awareness"){
+    if(showView("awareness")) renderAwarenessPreview();
+  } else {
+    showView("synth");
+    $all("#view-synth [data-rap]:not(button)").forEach(function(el){ el.style.display = (el.getAttribute("data-rap") === key) ? "" : "none"; });
+    if(key === "synth") renderSynthPreview();
+    else { populateExtractFilters("#extract-date", "#extract-quart"); populateExtractFilters("#extract2-date", "#extract2-quart"); }
+  }
+  $all("[data-subnav] button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-rap") === key); });
+  window.scrollTo(0,0);
+}
+function showSetGroup(g){
+  $all("#view-settings [data-set]").forEach(function(c){ c.style.display = (c.getAttribute("data-set") === g) ? "" : "none"; });
+  $all("#setNav button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-setgrp") === g); });
+}
+function wireNavigation(){
+  $all("#setNav button").forEach(function(b){ b.addEventListener("click", function(){ showSetGroup(b.getAttribute("data-setgrp")); window.scrollTo(0,0); }); });
+  showSetGroup("lists");
+  $all("[data-subnav] button").forEach(function(b){
+    b.addEventListener("click", function(){ showRap(b.getAttribute("data-rap")); });
+  });
+  document.addEventListener("click", function(e){
+    var g = e.target.closest("[data-goto]"); if(!g) return;
+    var k = g.getAttribute("data-goto");
+    if(k === "awareness") showRap("awareness");
+    else if(k === "synth") showRap("synth");
+    else { var t = $('.tab-btn[data-view="'+k+'"]'); if(t) t.click(); }
+  });
+  // Clavier ouvert : on masque la barre du bas pour ne pas gêner la saisie
+  var nav = $("#mainNav");
+  document.addEventListener("focusin", function(e){ if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) nav.classList.add("hide"); });
+  document.addEventListener("focusout", function(){ setTimeout(function(){
+    var a = document.activeElement; if(!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) nav.classList.remove("hide"); }, 150); });
+  showRap("synth"); showView("home");
+}
+
 function showView(name){
+  if(name === "settings" && !pinIsUnlocked()){
+    requestSettingsAccess(function(){ showView("settings"); renderAllSettings(); renderStorageUsage(); });
+    return false;
+  }
+  if(name !== "settings" && pinIsUnlocked()){
+    var sv0 = $("#view-settings");
+    if(sv0 && sv0.classList.contains("active")) _pinUnlockedUntil = Date.now() + PIN_GRACE_MS;
+  }
   $all(".view").forEach(function(v){ v.classList.remove("active"); });
   $all(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
   $("#view-"+name).classList.add("active");
-  $all(".tab-btn").forEach(function(b){ if(b.dataset.view===name) b.classList.add("active"); });
+  $all(".tab-btn").forEach(function(b){ if(b.dataset.view===name || (b.dataset.also||"").split(" ").indexOf(name) > -1) b.classList.add("active"); });
+  if(name === "home") renderHome();
   window.scrollTo(0,0);
+  return true;
 }
 
 /* ===================== RAPPORT UNITAIRE ===================== */
+/* Galerie de photos — règle unique de l'application : 4 miniatures larges par
+   ligne (150px min.), object-fit:contain — la photo entière reste toujours visible,
+   jamais recadrée ni déformée — jamais coincées dans une cellule de tableau.
+   S'intègre en bas du rapport avec le reste du bloc de validation (contrôleur + alertes). */
+function renderPhotoGallery(photos){
+  if(!photos || !photos.length) return "";
+  var cells = photos.map(function(p){
+    // Tolère les deux formats : objet {src,thumb,caption} (format actuel) ou chaîne
+    // brute (anciens contrôles enregistrés avant la correction de la liaison des
+    // photos NC). Utilise systématiquement la vignette légère "thumb" quand elle
+    // existe : c'est ce qui évite de recharger une image pleine résolution (jusqu'à
+    // 2200px) pour chaque miniature de la galerie au moment de l'export — la cause
+    // du plantage mémoire observé sur certains téléphones Android.
+    var src = (typeof p === "string") ? p : (p.thumb || p.src);
+    var caption = (typeof p === "string") ? "" : (p.caption || "");
+    if(!src) return "";
+    return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
+      (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
+      '</div>';
+  }).join("");
+  if(!cells) return "";
+  return '<div class="rgallery">'+cells+'</div>';
+}
+
+/* Variante "grande" — réservée à la photo de la fiche de rapport du quart (en
+   général 1 ou 2 photos, pas une galerie de preuves multiples) : image bien plus
+   haute (380px) et au maximum 2 par ligne, pour qu'elle soit immédiatement visible
+   et lisible à l'ouverture du rapport, au lieu d'être une simple vignette parmi
+   d'autres. Utilise toujours la version pleine résolution ("src") plutôt que la
+   vignette légère, puisqu'il y a très peu de photos ici — pas de risque mémoire. */
+function renderPhotoGalleryLarge(photos){
+  if(!photos || !photos.length) return "";
+  var cells = photos.map(function(p){
+    var src = (typeof p === "string") ? p : (p.src || p.thumb);
+    var caption = (typeof p === "string") ? "" : (p.caption || "");
+    if(!src) return "";
+    return '<div class="rgallery-cell rgallery-cell-large"><img src="'+src+'" style="width:100%;height:380px;min-height:380px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
+      (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
+      '</div>';
+  }).join("");
+  if(!cells) return "";
+  return '<div class="rgallery rgallery-large">'+cells+'</div>';
+}
+
+/* Légende de partage : simple et courte — type de rapport + ligne (le nom de la ligne
+   inclut déjà le format/volume, ex. "Eurostar 9 – 35 cl"). */
+function buildControlCaption(ctrl){
+  if(!ctrl) return "Rapport de contrôle — MIBEM COMPANY";
+  return "Rapport de contrôle — MIBEM COMPANY — "+ctrl.ligne;
+}
+
+/* Légende de partage pour la synthèse de fin de quart. */
+function buildSynthesisCaption(){
+  var controls = state.shiftControls;
+  var quart = controls.length ? controls[0].quart : "";
+  return "Rapport de fin de quart — MIBEM COMPANY"+(quart ? " — "+quart : "");
+}
+
+/* Badge de statut discret (remplace les gros émojis répétés sur chaque ligne). */
+function statusBadge(st){
+  var cls = st==="nc" ? "rbadge-nc" : (st==="warn" ? "rbadge-warn" : "rbadge-ok");
+  return '<span class="rbadge '+cls+'">'+escapeHtml(STATUS_LABEL[st])+'</span>';
+}
+
+/* Badge d'efficacité CAPA : libellé court à l'affichage (colonnes étroites, sans
+   troncature possible) — la valeur complète reste inchangée dans les données et
+   dans les exports Excel, seul l'affichage en badge est raccourci. */
+function efficaciteBadge(v){
+  var cls = v === "Efficace" ? "rbadge-ok" : (v && v.indexOf("Non efficace") === 0) ? "rbadge-nc" : "rbadge-warn";
+  var label = v === "Efficace" ? "Efficace" : (v && v.indexOf("Non efficace") === 0) ? "Non efficace" : "À vérifier";
+  return '<span class="rbadge '+cls+'">'+escapeHtml(label)+'</span>';
+}
+
 function buildSingleReportHtml(ctrl){
   var order = ctrl.paramOrder || Object.keys(ctrl.parametres);
-  var paramsHtml = order.map(function(p){
+
+  // BLOC 2 — tableau des résultats (colonnes largeur auto, jamais de texte coupé).
+  var rows = order.map(function(p){
     var pdata = ctrl.parametres[p];
     if(!pdata) return "";
-    var st = pdata.status;
-    var ech = pdata.echantillon ? (" ("+escapeHtml(pdata.echantillon)+")") : "";
-    return '<div class="rparam"><span>'+STATUS_ICON[st]+' '+escapeHtml(p)+ech+'</span><b>'+STATUS_LABEL[st]+'</b></div>';
+    var ech = pdata.echantillon ? escapeHtml(pdata.echantillon) : "—";
+    return '<tr><td>'+escapeHtml(p)+'</td><td class="rcell-center">'+ech+'</td><td class="rcell-center">'+statusBadge(pdata.status)+'</td></tr>';
   }).join("");
   if(ctrl.typeBouteille){
-    paramsHtml += '<div class="rparam"><span>✅ Type de bouteille</span><b>'+escapeHtml(ctrl.typeBouteille)+'</b></div>';
+    rows += '<tr><td>Type de bouteille</td><td class="rcell-center">—</td><td class="rcell-center">'+escapeHtml(ctrl.typeBouteille)+'</td></tr>';
   }
+  var resultsTable = '<table><tr><th>Paramètre</th><th>Échantillon</th><th>Statut</th></tr>'+rows+'</table>';
 
+  // Non-conformités : tableau compact, une ligne par NC, plutôt que de longs blocs répétés.
   var ncHtml = "";
   var ncKeys = Object.keys(ctrl.nc);
   if(ncKeys.length){
-    ncHtml += '<h3 class="rsection">🚨 Non-conformités détectées</h3>';
+    var ncRows = ncKeys.map(function(p){
+      var d = ctrl.nc[p];
+      var photos = (d.photos||[]).map(function(ph){ return (typeof ph === "string") ? ph : ph.src; }).filter(Boolean);
+      return '<tr>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.niveau||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.defaut||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center">'+(photos.length ? ("📷 "+photos.length) : "—")+'</td>'+
+      '</tr>';
+    }).join("");
+    ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
+      '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:11%;"><col style="width:20%;"><col style="width:9%;">'+
+          '<col style="width:9%;"><col style="width:14%;"><col style="width:16%;">'+
+          '<col style="width:8%;"><col style="width:13%;">'+
+        '</colgroup>'+
+        '<tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+
+        ncRows+
+      '</table>';
+    // Cause, clôture et boucle CAPA (action préventive + vérification d'efficacité,
+    // conformément à ISO 9001 §10.2 : corriger, prévenir la récidive, vérifier que
+    // l'action a réellement fonctionné) en texte libre juste en dessous.
     ncKeys.forEach(function(p){
       var d = ctrl.nc[p];
-      var photosHtml = (d.photos||[]).map(function(src){ return '<img src="'+src+'">'; }).join("");
-      ncHtml += '<div class="rnc">'+
-        '<b>DESCRIPTION DE LA NON-CONFORMITÉ :</b> '+escapeHtml(d.description||"—")+'<br>'+
-        '<b>NIVEAU :</b> '+escapeHtml(d.niveau||"—")+'<br>'+
-        '<b>DÉFAUTS :</b> '+escapeHtml(d.defaut||"—")+'<br>'+
-        '<b>Quantité concernée :</b> '+escapeHtml(d.quantite||"—")+'<br>'+
-        '<b>CLASSE DU DÉFAUT :</b> '+escapeHtml(d.classeDefaut||"—")+'<br>'+
-        '<b>PARAMÈTRES NC :</b> '+escapeHtml(p)+'<br>'+
-        '<b>ACTION IMMÉDIATE :</b> '+escapeHtml(d.actionImmediate||"—")+'<br>'+
-        '<b>NC TRAITÉE :</b> '+escapeHtml(d.ncTraitee||"Non")+(d.ncTraitee==="Oui" && d.clotureDetails ? (" — "+escapeHtml(d.clotureDetails)) : "")+'<br>'+
-        '<b>CAUSES DE LA NON-CONFORMITÉ :</b> '+escapeHtml(d.cause||"—")+'<br>'+
-        '<b>Photo jointe :</b> '+((d.photos||[]).length ? "Oui" : "Non")+
-        (photosHtml ? '<div class="rphotos">'+photosHtml+'</div>' : '')+
-      '</div>';
+      var hasContent = (d.cause && d.cause.trim()) || (d.actionPreventive && d.actionPreventive.trim());
+      if(hasContent){
+        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
+          (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
+          (d.actionPreventive && d.actionPreventive.trim() ? '<br><b>Action préventive :</b> '+escapeHtml(d.actionPreventive) : '')+
+          ' <b>· Efficacité :</b> '+efficaciteBadge(d.verifEfficacite)+
+          '</div>';
+      }
     });
+    // Bloc dédié "Photos de la non-conformité", juste sous le tableau des défauts —
+    // jamais coincées dans une cellule, toujours en grande vignette (150px min., 4/ligne).
+    var ncPhotos = [];
+    ncKeys.forEach(function(p){
+      (ctrl.nc[p].photos||[]).forEach(function(ph){
+        var src = (typeof ph === "string") ? ph : ph.src;
+        if(src) ncPhotos.push({src:src, caption:p});
+      });
+    });
+    if(ncPhotos.length){
+      ncHtml += '<h3 class="rsection">🔍 Photos de la non-conformité</h3>'+renderPhotoGallery(ncPhotos);
+    }
   }
 
-  var photosHtmlDoc = "";
-  if(ctrl.photos && ctrl.photos.length){
-    photosHtmlDoc = '<h3 class="rsection">📸 Photos terrain (preuves)</h3><div class="rphotos-grid">'+
-      ctrl.photos.map(function(p){
-        return '<div class="rphoto-cell"><img src="'+p.src+'">'+(p.caption?'<div class="rphoto-cap">'+escapeHtml(p.caption)+'</div>':'')+'</div>';
-      }).join("")+
-    '</div>';
-  }
-
-  var alertHtml = "";
-  if(ctrl.alertes && ctrl.alertes.trim()){
-    alertHtml = '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="ralert">'+escapeHtml(ctrl.alertes).replace(/\n/g,"<br>")+'</div>';
-  }
+  // BLOC 3 — validation en bas de page : contrôleur + alertes (jamais de texte
+  // inventé — "Aucune alerte" explicite si le champ est vide) + photos terrain
+  // générales (hors NC, affichées séparément ci-dessus), le tout fusionné dans un
+  // seul bloc pour ne jamais être isolé sur une nouvelle page.
+  var alertText = (ctrl.alertes && ctrl.alertes.trim()) ? escapeHtml(ctrl.alertes).replace(/\n/g,"<br>") : "Aucune alerte";
+  var alertClass = (ctrl.alertes && ctrl.alertes.trim()) ? "ralert" : "ralert rempty";
+  var terrainPhotos = (ctrl.photos||[]).map(function(p){
+    var src = (typeof p === "string") ? p : p.src;
+    return src ? {src:src, caption:""} : null;
+  }).filter(Boolean);
+  var photosHtml = terrainPhotos.length
+    ? '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGallery(terrainPhotos)
+    : "";
 
   return (
     '<div class="report-doc" id="reportDocInner">'+
       '<div class="rheader">'+
         '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
-        '<div class="rtitle">𝗖𝗢𝗡𝗧𝗥𝗢̂𝗟𝗘 SUR LES 𝗟𝗜𝗚𝗡𝗘𝗦</div>'+
+        '<div><div class="rtitle">📋 Rapport de contrôle</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
       '</div>'+
-      '<div class="rmeta">'+
-        '<div><b>Date :</b> '+escapeHtml(dmy(ctrl.date))+'</div>'+
-        '<div><b>Quart :</b> '+escapeHtml(ctrl.quart)+'</div>'+
-        '<div><b>Heure :</b> '+escapeHtml(ctrl.heure)+'</div>'+
-        '<div><b>Ligne :</b> '+escapeHtml(ctrl.ligne)+'</div>'+
-        '<div><b>Produit :</b> '+escapeHtml(ctrl.produit)+'</div>'+
-        '<div><b>Format :</b> '+escapeHtml(ctrl.format||"—")+'</div>'+
-        '<div><b>Emballage :</b> '+escapeHtml(ctrl.emballage)+'</div>'+
-        '<div><b>N° de lot :</b> '+escapeHtml(ctrl.lot||"—")+'</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(ctrl.date))+'</b></div>'+
+          '<div class="rmeta-item"><span>Heure</span><b>'+escapeHtml(ctrl.heure)+'</b></div>'+
+          '<div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(ctrl.quart)+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Ligne</span><b>'+escapeHtml(ctrl.ligne)+'</b></div>'+
+          '<div class="rmeta-item"><span>Produit</span><b>'+escapeHtml(ctrl.produit)+'</b></div>'+
+          '<div class="rmeta-item"><span>Format</span><b>'+escapeHtml(ctrl.format||"—")+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Emballage</span><b>'+escapeHtml(ctrl.emballage)+'</b></div>'+
+          '<div class="rmeta-item"><span>N° de lot</span><b>'+escapeHtml(ctrl.lot||"—")+'</b></div>'+
+        '</div>'+
       '</div>'+
       '<h3 class="rsection">⚙️ Paramètres contrôlés</h3>'+
-      paramsHtml+
+      resultsTable+
       ncHtml+
-      photosHtmlDoc+
-      alertHtml+
-      '<div class="rfoot"><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '<div class="rfooter-block">'+
+        '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
+        photosHtml+
+        '<div class="rfoot"><span>Site : <b>'+escapeHtml(ctrl.site||"—")+'</b></span><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '</div>'+
     '</div>'
   );
 }
@@ -2125,90 +3293,606 @@ function buildSynthesisHtml(){
 
   var totalNC = 0, totalMaj = 0, totalCrit = 0, totalMin = 0;
   var lignesStat = {};
+  var defautCount = {}; // Pareto : compte chaque défaut choisi (catalogue) sur le quart
+  var nonEfficaceCount = 0;
   controls.forEach(function(c){
     var ncKeys = Object.keys(c.nc);
     totalNC += ncKeys.length;
     ncKeys.forEach(function(k){
-      var g = c.nc[k].classeDefaut;
+      var d = c.nc[k];
+      var g = d.classeDefaut;
       if(g==="Majeure") totalMaj++; else if(g==="Critique") totalCrit++; else totalMin++;
+      var key = d.defaut || k;
+      defautCount[key] = (defautCount[key]||0) + 1;
+      if(d.verifEfficacite && d.verifEfficacite.indexOf("Non efficace") === 0) nonEfficaceCount++;
     });
     lignesStat[c.ligne] = lignesStat[c.ligne] || {n:0, nc:0};
     lignesStat[c.ligne].n++;
     lignesStat[c.ligne].nc += ncKeys.length;
   });
 
+  // KPI qualité : taux de conformité du quart (contrôles sans aucune NC / total).
+  var controlesConformes = controls.filter(function(c){ return Object.keys(c.nc).length === 0; }).length;
+  var tauxConformite = controls.length ? Math.round((controlesConformes/controls.length)*100) : 100;
+  var tauxClass = tauxConformite >= 95 ? "rbadge-ok" : (tauxConformite >= 80 ? "rbadge-warn" : "rbadge-nc");
+
+  // Détection automatique de récurrence (analyse statistique simple, façon Pareto) :
+  // un défaut qui revient 2 fois ou plus durant le même quart signale un problème
+  // systémique (usure d'un équipement, dérive process) plutôt qu'un incident isolé —
+  // c'est le principe même de l'amélioration continue ISO 9001. Aucune saisie
+  // supplémentaire : tout est déduit des non-conformités déjà enregistrées.
+  var recurrents = Object.keys(defautCount)
+    .map(function(k){ return {defaut:k, n:defautCount[k]}; })
+    .filter(function(x){ return x.n >= 2; })
+    .sort(function(a,b){ return b.n - a.n; });
+
+  // Tableau des indicateurs : table-layout:auto + wrap (voir CSS) garantit que
+  // "Majeures" et les autres libellés ne sont jamais coupés, quelle que soit
+  // la largeur d'export.
+  var indicatorsTable =
+    '<table><tr><th>Contrôles</th><th>Taux conformité</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
+    '<tr><td class="rcell-center">'+controls.length+'</td>'+
+    '<td class="rcell-center"><span class="rbadge '+tauxClass+'">'+tauxConformite+' %</span></td>'+
+    '<td class="rcell-center">'+totalNC+'</td>'+
+    '<td class="rcell-center">'+totalMin+'</td><td class="rcell-center">'+totalMaj+'</td><td class="rcell-center">'+totalCrit+'</td></tr></table>';
+
+  // Section innovation : alertes de récurrence (détection automatique de tendance).
+  var recurrenceHtml = "";
+  if(recurrents.length){
+    var recurrenceRows = recurrents.map(function(x){
+      var sev = x.n >= 3 ? "rbadge-nc" : "rbadge-warn";
+      return '<tr><td class="rwrap">'+escapeHtml(x.defaut)+'</td><td class="rcell-center">'+x.n+' fois</td>'+
+        '<td class="rcell-center"><span class="rbadge '+sev+'">'+(x.n>=3?"Systémique":"À surveiller")+'</span></td></tr>';
+    }).join("");
+    recurrenceHtml = '<h3 class="rsection">📈 Alertes de récurrence (détection automatique)</h3>'+
+      '<table><tr><th>Défaut</th><th>Occurrences</th><th>Sévérité</th></tr>'+recurrenceRows+'</table>'+
+      '<div class="ralert" style="border-left-color:#b3261e;">Ces défauts sont apparus plusieurs fois durant le même quart : il s\'agit probablement d\'une cause systémique (usure d\'équipement, dérive process) plutôt que d\'incidents isolés. Priorité recommandée pour l\'action préventive.</div>';
+  }
+  if(nonEfficaceCount > 0){
+    recurrenceHtml += '<div class="ralert" style="border-left-color:#b3261e;margin-top:6px;">⚠️ '+nonEfficaceCount+' action(s) corrective(s) jugée(s) NON EFFICACE(S) ce quart — la non-conformité correspondante a réapparu malgré le correctif. À traiter en priorité au prochain quart.</div>';
+  }
+
   var tableRows = controls.map(function(c){
     var w = worstStatus(c);
-    var icon = w==="nc" ? "🚨" : (w==="warn" ? "🟨" : "✅");
     var ncPhotoCount = 0;
     Object.keys(c.nc).forEach(function(k){ ncPhotoCount += (c.nc[k].photos||[]).length; });
     var photoCount = (c.photos||[]).length + ncPhotoCount;
-    return '<tr><td>'+escapeHtml(c.heure)+'</td><td>'+escapeHtml(c.ligne)+'</td><td>'+escapeHtml(c.produit)+'</td>'+
+    return '<tr><td>'+escapeHtml(c.heure)+'</td><td class="rwrap">'+escapeHtml(c.ligne)+'</td><td class="rwrap">'+escapeHtml(c.produit)+'</td>'+
       '<td>'+escapeHtml(c.format||"—")+'</td><td>'+escapeHtml(c.lot||"—")+'</td>'+
-      '<td>'+icon+' '+Object.keys(c.nc).length+'</td><td>📷 '+photoCount+'</td></tr>';
+      '<td class="rcell-center">'+statusBadge(w)+'</td>'+
+      '<td class="rcell-center">'+Object.keys(c.nc).length+'</td><td class="rcell-center">'+photoCount+'</td></tr>';
   }).join("");
 
   var ligneRows = Object.keys(lignesStat).map(function(l){
     var s = lignesStat[l];
-    var pct = s.n>0 ? Math.round(((s.n-s.nc)/s.n)*100) : 100;
-    return '<tr><td>'+escapeHtml(l)+'</td><td>'+s.n+'</td><td>'+s.nc+'</td></tr>';
+    return '<tr><td>'+escapeHtml(l)+'</td><td class="rcell-center">'+s.n+'</td><td class="rcell-center">'+s.nc+'</td></tr>';
   }).join("");
 
-  var ncDetailHtml = "";
+  // Non-conformités du quart : tableau compact plutôt que blocs répétés.
+  var ncRows = [];
   controls.forEach(function(c){
     Object.keys(c.nc).forEach(function(p){
       var d = c.nc[p];
-      ncDetailHtml += '<div class="rnc"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' · '+escapeHtml(c.produit)+'</b><br>'+
-        '<b>Paramètre :</b> '+escapeHtml(p)+' — <b>Description :</b> '+escapeHtml(d.description||"—")+'<br>'+
-        '<b>Défaut :</b> '+escapeHtml(d.defaut||"—")+' · <b>Classe :</b> '+escapeHtml(d.classeDefaut||"—")+' · <b>Niveau :</b> '+escapeHtml(d.niveau||"—")+'<br>'+
-        '<b>Quantité :</b> '+escapeHtml(d.quantite||"—")+' · <b>NC traitée :</b> '+escapeHtml(d.ncTraitee||"Non")+
-      '</div>';
+      ncRows.push('<tr>'+
+        '<td class="rwrap">'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center">'+efficaciteBadge(d.verifEfficacite)+'</td>'+
+      '</tr>');
     });
   });
-  if(!ncDetailHtml) ncDetailHtml = '<p style="font-family:-apple-system,Arial,sans-serif;font-size:.85rem;">Aucune non-conformité détectée durant ce quart.</p>';
+  var ncDetailHtml = ncRows.length
+    ? '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:17%;"><col style="width:14%;"><col style="width:27%;">'+
+          '<col style="width:12%;"><col style="width:12%;"><col style="width:18%;">'+
+        '</colgroup>'+
+        '<tr><th>Contrôle</th><th>Paramètre</th><th>Description</th><th>Classe</th><th>Traitée</th><th>Efficacité</th></tr>'+
+        ncRows.join("")+
+      '</table>'
+    : '<p style="font-size:.8rem;color:#888;font-style:italic;">Aucune non-conformité détectée durant ce quart.</p>';
 
-  var alertesHtml = "";
+  // Points d'alerte — jamais de texte inventé : "Aucune alerte" explicite si rien n'a été saisi.
+  var alertesLines = [];
   controls.forEach(function(c){
     if(c.alertes && c.alertes.trim()){
-      alertesHtml += '<div class="ralert"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' :</b> '+escapeHtml(c.alertes)+'</div>';
+      alertesLines.push('<div class="ralert"><b>'+escapeHtml(c.heure)+' · '+escapeHtml(c.ligne)+' :</b> '+escapeHtml(c.alertes)+'</div>');
     }
   });
-  if(!alertesHtml) alertesHtml = '<p style="font-family:-apple-system,Arial,sans-serif;font-size:.85rem;">Aucun point d\'alerte signalé pour le quart suivant.</p>';
+  var alertesHtml = alertesLines.length ? alertesLines.join("") : '<div class="ralert rempty">Aucune alerte</div>';
 
-  var synthPhotosHtml = "";
-  if(state.synthPhotos && state.synthPhotos.length){
-    synthPhotosHtml = '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3><div class="rphotos-grid">'+
-      state.synthPhotos.map(function(p){
-        return '<div class="rphoto-cell"><img src="'+p.src+'">'+(p.caption?'<div class="rphoto-cap">'+escapeHtml(p.caption)+'</div>':'')+'</div>';
-      }).join("")+
-    '</div>';
-  }
+  // Seule la photo de la fiche de rapport (le document/récapitulatif visuel du quart)
+  // apparaît ici — jamais les photos de contrôle terrain, produit ou défaut, qui
+  // restent propres au rapport de contrôle individuel de chaque ligne.
+  var synthPhotosHtml = (state.synthPhotos && state.synthPhotos.length)
+    ? '<h3 class="rsection">📸 Photo(s) de la fiche de rapport (quart)</h3>'+renderPhotoGalleryLarge(state.synthPhotos)
+    : "";
 
   return (
     '<div class="report-doc" id="reportDocInner">'+
       '<div class="rheader">'+
         '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
-        '<div class="rtitle">RAPPORT JOURNALIER — CONTRÔLE QUALITÉ<br><span style="font-size:.8rem;font-weight:600;">Lignes de conditionnement — MIBEM COMPANY</span></div>'+
+        '<div><div class="rtitle">📋 Rapport de fin de quart</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
       '</div>'+
-      '<div class="rmeta">'+
-        '<div><b>Date :</b> '+escapeHtml(dmy(date))+'</div>'+
-        '<div><b>Quart :</b> '+escapeHtml(quart)+'</div>'+
-        '<div><b>Contrôles effectués :</b> '+controls.length+'</div>'+
-        '<div><b>Visa responsable :</b> '+escapeHtml(visa)+'</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(date))+'</b></div>'+
+          '<div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quart)+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Contrôles</span><b>'+controls.length+'</b></div>'+
+          '<div class="rmeta-item"><span>NC totales</span><b>'+totalNC+'</b></div>'+
+        '</div>'+
+        '<div class="rmeta-col">'+
+          '<div class="rmeta-item"><span>Visa</span><b>'+escapeHtml(visa)+'</b></div>'+
+        '</div>'+
       '</div>'+
       '<h3 class="rsection">📊 Indicateurs du quart</h3>'+
-      '<table><tr><th>Contrôles</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
-      '<tr><td>'+controls.length+'</td><td>'+totalNC+'</td><td>'+totalMin+'</td><td>'+totalMaj+'</td><td>'+totalCrit+'</td></tr></table>'+
+      indicatorsTable+
+      recurrenceHtml+
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
       '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
-      '<table><tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>Photos</th></tr>'+tableRows+'</table>'+
+      '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:9%;"><col style="width:15%;"><col style="width:19%;">'+
+          '<col style="width:11%;"><col style="width:11%;"><col style="width:14%;">'+
+          '<col style="width:8%;"><col style="width:13%;">'+
+        '</colgroup>'+
+        '<tr><th>Heure</th><th>Ligne</th><th>Produit</th><th>Format</th><th>Lot</th><th>Statut</th><th>NC</th><th>Photos</th></tr>'+
+        tableRows+
+      '</table>'+
       '<h3 class="rsection">🚨 Non-conformités du quart</h3>'+ncDetailHtml+
-      synthPhotosHtml+
-      '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
-      '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '<div class="rfooter-block">'+
+        '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
+        synthPhotosHtml+
+        '<div class="rfoot"><span>Visa : <b>'+escapeHtml(visa)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+      '</div>'+
     '</div>'
   );
+}
+
+/* ===================== MODULES D'EXTRACTION AUTOMATIQUE (aucune ressaisie) =====================
+   Les deux modules ci-dessous ne font QUE lire les données déjà saisies dans
+   state.shiftControls (les rapports de contrôle par ligne). Les menus déroulants
+   Date/Quart sont remplis avec les seules valeurs réellement présentes dans les
+   données — on ne demande jamais à l'opérateur de retaper quoi que ce soit. */
+
+/* ===================== HISTORIQUE MULTI-QUARTS (tendance dans le temps) =====================
+   Le quart en cours (state.shiftControls) est effacé à chaque "Nouveau quart" — nécessaire
+   pour ne pas re-saisir, mais ça empêchait toute analyse de tendance au-delà d'un seul
+   quart. On archive donc, juste avant l'effacement, un résumé LÉGER (sans les photos —
+   uniquement les données utiles à la détection de récurrence) dans IndexedDB, avec purge
+   automatique au-delà de la fenêtre de rétention pour ne jamais grossir indéfiniment. */
+var HISTORY_KEY = "mibem_qhse_history_v1";
+var HISTORY_RETENTION_DAYS = 90;
+
+function loadShiftHistory(){
+  return idbGet(HISTORY_KEY).then(function(arr){ return arr || []; }).catch(function(){ return []; });
+}
+function saveShiftHistory(arr){
+  return idbSet(HISTORY_KEY, arr).catch(function(err){ console.error("Échec sauvegarde historique tendance :", err); });
+}
+
+/* Construit un résumé léger (sans photos) du quart pour l'archive de tendance. */
+function buildArchiveRecord(controls){
+  var ncList = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      ncList.push({
+        date:c.date, quart:c.quart, heure:c.heure, ligne:c.ligne, produit:c.produit, lot:c.lot,
+        parametre:p, defaut:d.defaut||p, classeDefaut:d.classeDefaut||"", niveau:d.niveau||"",
+        cause:d.cause||"", actionPreventive:d.actionPreventive||"",
+        verifEfficacite:d.verifEfficacite||"À vérifier", ncTraitee:d.ncTraitee||"Non"
+      });
+    });
+  });
+  return {
+    date: controls.length ? controls[0].date : todayISO(),
+    quart: controls.length ? controls[0].quart : getQuart(),
+    archivedAt: new Date().toISOString(),
+    totalControls: controls.length,
+    controlesConformes: controls.filter(function(c){ return Object.keys(c.nc).length===0; }).length,
+    nc: ncList
+  };
+}
+
+/* Archive le quart en cours dans l'historique, avec purge des entrées trop anciennes.
+   Ne fait rien si le quart est vide (rien à archiver). Retourne toujours une Promise
+   résolue, même en cas d'erreur, pour ne jamais bloquer le démarrage du nouveau quart. */
+function archiveCurrentShiftToHistory(){
+  if(!state.shiftControls.length) return Promise.resolve();
+  var record = buildArchiveRecord(state.shiftControls);
+  return loadShiftHistory().then(function(history){
+    history.push(record);
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - HISTORY_RETENTION_DAYS);
+    var cutoffISO = todayISOFromDate(cutoff);
+    history = history.filter(function(h){ return h.date >= cutoffISO; });
+    return saveShiftHistory(history);
+  }).catch(function(err){
+    console.error("Échec de l'archivage du quart dans l'historique de tendance :", err);
+  });
+}
+function todayISOFromDate(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+
+/* Calcule la récurrence des défauts sur une fenêtre glissante (historique archivé +
+   quart en cours, pas encore archivé). windowDays = 7 / 30 / 90 / "all". */
+function computeMultiShiftRecurrence(windowDays){
+  return loadShiftHistory().then(function(history){
+    var cutoffISO = null;
+    if(windowDays !== "all"){
+      var d = new Date();
+      d.setDate(d.getDate() - parseInt(windowDays,10));
+      cutoffISO = todayISOFromDate(d);
+    }
+    var ncEntries = [];
+    var shiftsInWindow = 0;
+    history.forEach(function(h){
+      if(!cutoffISO || h.date >= cutoffISO){
+        shiftsInWindow++;
+        ncEntries = ncEntries.concat(h.nc);
+      }
+    });
+    // Le quart en cours n'est pas encore archivé — on l'inclut quand même dans l'analyse.
+    if(state.shiftControls.length){
+      var curDate = state.shiftControls[0].date;
+      if(!cutoffISO || curDate >= cutoffISO){
+        shiftsInWindow++;
+        state.shiftControls.forEach(function(c){
+          Object.keys(c.nc).forEach(function(p){
+            var d2 = c.nc[p];
+            ncEntries.push({
+              date:c.date, quart:c.quart, heure:c.heure, ligne:c.ligne, produit:c.produit, lot:c.lot,
+              parametre:p, defaut:d2.defaut||p, classeDefaut:d2.classeDefaut||"", niveau:d2.niveau||"",
+              cause:d2.cause||"", actionPreventive:d2.actionPreventive||"",
+              verifEfficacite:d2.verifEfficacite||"À vérifier", ncTraitee:d2.ncTraitee||"Non"
+            });
+          });
+        });
+      }
+    }
+    var counts = {};
+    ncEntries.forEach(function(n){
+      var key = n.defaut || n.parametre;
+      if(!counts[key]) counts[key] = {n:0, dates:{}, lignes:{}};
+      counts[key].n++;
+      counts[key].dates[n.date] = true;
+      counts[key].lignes[n.ligne] = true;
+    });
+    var pareto = Object.keys(counts).map(function(k){
+      var c = counts[k];
+      return {
+        defaut:k, occurrences:c.n,
+        joursDistincts:Object.keys(c.dates).length,
+        lignesTouchees:Object.keys(c.lignes).join(", ")
+      };
+    }).sort(function(a,b){ return b.occurrences - a.occurrences; });
+    return {pareto:pareto, totalNC:ncEntries.length, shiftsAnalyses:shiftsInWindow, entries:ncEntries};
+  });
+}
+
+function distinctShiftDatesQuarts(){
+  var dates = [], quarts = [];
+  state.shiftControls.forEach(function(c){
+    if(dates.indexOf(c.date) === -1) dates.push(c.date);
+    if(quarts.indexOf(c.quart) === -1) quarts.push(c.quart);
+  });
+  dates.sort();
+  return {dates:dates, quarts:quarts};
+}
+
+function populateExtractFilters(dateSelId, quartSelId){
+  var dq = distinctShiftDatesQuarts();
+  var dateSel = $(dateSelId), quartSel = $(quartSelId);
+  if(!dateSel || !quartSel) return;
+  var curDate = dateSel.value, curQuart = quartSel.value;
+  dateSel.innerHTML = dq.dates.length
+    ? dq.dates.map(function(d){ return '<option value="'+d+'">'+dmy(d)+'</option>'; }).join("")
+    : '<option value="">— Aucun contrôle enregistré —</option>';
+  quartSel.innerHTML = dq.quarts.length
+    ? dq.quarts.map(function(q){ return '<option value="'+escapeHtml(q)+'">'+escapeHtml(q)+'</option>'; }).join("")
+    : '<option value="">—</option>';
+  // Conserve la sélection précédente si elle existe toujours, sinon prend la plus récente.
+  if(dq.dates.indexOf(curDate) !== -1) dateSel.value = curDate;
+  else dateSel.value = dq.dates[dq.dates.length-1] || "";
+  if(dq.quarts.indexOf(curQuart) !== -1) quartSel.value = curQuart;
+  else quartSel.value = dq.quarts[dq.quarts.length-1] || "";
+}
+
+function filterShiftControls(dateSel, quartSel){
+  return state.shiftControls.filter(function(c){
+    return c.date === dateSel && c.quart === quartSel;
+  });
+}
+
+/* ---- MODULE 1 : Synthèse produits et lots (traçabilité matières) ---- */
+function buildProduitsLotsReportHtml(dateSel, quartSel){
+  var rows = filterShiftControls(dateSel, quartSel);
+  var body = rows.length
+    ? rows.map(function(c){
+        return '<tr><td class="rwrap">'+escapeHtml(c.ligne)+'</td><td class="rwrap">'+escapeHtml(c.produit)+'</td>'+
+          '<td class="rcell-center">'+escapeHtml(c.format||"—")+'</td><td class="rcell-center">'+escapeHtml(c.lot||"—")+'</td></tr>';
+      }).join("")
+    : '<tr><td colspan="4" style="text-align:center;color:#888;font-style:italic;">Aucun contrôle enregistré pour cette date/quart.</td></tr>';
+  return (
+    '<div class="report-doc" id="extract1DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">📦 Synthèse produits et lots</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(dateSel))+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quartSel)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Lignes contrôlées</span><b>'+rows.length+'</b></div></div>'+
+      '</div>'+
+      '<table style="table-layout:fixed;">'+
+        '<colgroup><col style="width:30%;"><col style="width:34%;"><col style="width:18%;"><col style="width:18%;"></colgroup>'+
+        '<tr><th>Machine / Ligne</th><th>Produit</th><th>Format</th><th>N° de lot</th></tr>'+body+
+      '</table>'+
+      '<div class="rfoot"><span>Traçabilité matières — extraction automatique</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract1Preview(){
+  var host = $("#extract1PreviewHost");
+  if(!host) return;
+  var dateSel = $("#extract-date").value, quartSel = $("#extract-quart").value;
+  host.innerHTML = buildProduitsLotsReportHtml(dateSel, quartSel);
+  $("#extract1ExportRow").style.display = "block";
+}
+
+function buildExtract1ExcelWorkbook(dateSel, quartSel){
+  var rows = filterShiftControls(dateSel, quartSel);
+  var sheet = rows.length ? rows.map(function(c){
+    return {"Machine / Ligne": c.ligne, "Produit": c.produit, "Format": c.format||"", "N° de lot": c.lot||""};
+  }) : [{"Machine / Ligne":"", "Produit":"", "Format":"", "N° de lot":"Aucun contrôle pour cette date/quart"}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Produits et lots");
+  return wb;
+}
+
+/* ---- MODULE 2 : Journal isolé des non-conformités ---- */
+function buildNCJournalReportHtml(dateSel, quartSel){
+  var controls = filterShiftControls(dateSel, quartSel);
+  var ncRows = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      ncRows.push('<tr>'+
+        '<td class="rwrap">'+escapeHtml(c.ligne)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
+        '<td class="rcell-center rwrap">'+escapeHtml(d.niveau||"—")+' / '+escapeHtml(d.classeDefaut||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.cause||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionImmediate||"—")+'</td>'+
+        '<td class="rwrap">'+escapeHtml(d.actionPreventive||"—")+'</td>'+
+        '<td class="rcell-center">'+escapeHtml(d.ncTraitee||"Non")+'</td>'+
+        '<td class="rcell-center">'+efficaciteBadge(d.verifEfficacite)+'</td>'+
+      '</tr>');
+    });
+  });
+  var body = ncRows.length
+    ? '<table style="table-layout:fixed;">'+
+        '<colgroup>'+
+          '<col style="width:10%;"><col style="width:10%;"><col style="width:16%;">'+
+          '<col style="width:8%;"><col style="width:13%;"><col style="width:13%;">'+
+          '<col style="width:13%;"><col style="width:7%;"><col style="width:10%;">'+
+        '</colgroup>'+
+        '<tr><th>Ligne</th><th>Paramètre</th><th>Description</th><th>Criticité</th><th>Cause</th><th>Action immédiate</th><th>Action préventive</th><th>Traitée</th><th>Efficacité</th></tr>'+
+        ncRows.join("")+
+      '</table>'
+    : '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité détectée.</div>';
+  return (
+    '<div class="report-doc" id="extract2DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">🚨 Journal des non-conformités</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(dateSel))+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(quartSel)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>NC détectées</span><b>'+ncRows.length+'</b></div></div>'+
+      '</div>'+
+      body+
+      '<div class="rfoot"><span>Journal isolé des anomalies — extraction automatique</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract2Preview(){
+  var host = $("#extract2PreviewHost");
+  if(!host) return;
+  var dateSel = $("#extract2-date").value, quartSel = $("#extract2-quart").value;
+  host.innerHTML = buildNCJournalReportHtml(dateSel, quartSel);
+  $("#extract2ExportRow").style.display = "block";
+}
+
+function buildExtract2ExcelWorkbook(dateSel, quartSel){
+  var controls = filterShiftControls(dateSel, quartSel);
+  var sheet = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      sheet.push({
+        "Ligne": c.ligne, "Paramètre": p, "Description": d.description||"",
+        "Niveau": d.niveau||"", "Classe": d.classeDefaut||"",
+        "Cause": d.cause||"", "Action immédiate": d.actionImmediate||"",
+        "Action préventive": d.actionPreventive||"", "Efficacité vérifiée": d.verifEfficacite||"À vérifier",
+        "Traitée": d.ncTraitee||"Non"
+      });
+    });
+  });
+  if(!sheet.length) sheet.push({"Ligne":"", "Paramètre":"", "Description":"Aucune non-conformité détectée", "Niveau":"", "Classe":"", "Cause":"", "Action immédiate":"", "Action préventive":"", "Efficacité vérifiée":"", "Traitée":""});
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Non-conformités");
+  return wb;
+}
+
+function exportExtractExcel(wb, filename){
+  if(isNativeApp() && window.Capacitor.Plugins.Filesystem){
+    var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+    saveDocumentToNativeStorage(base64, filename)
+      .then(function(){ toast("✔ Enregistré : Fichiers > Documents > "+filename); })
+      .catch(function(err){
+        console.error(err);
+        offerNativeSaveFallback(base64, filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      });
+  } else {
+    XLSX.writeFile(wb, filename);
+    toast("Export Excel généré ✔");
+  }
+}
+
+/* ---- MODULE 3 : Tendance multi-quarts (récurrence sur plusieurs jours) ---- */
+var WINDOW_LABELS = {"7":"7 derniers jours", "30":"30 derniers jours", "90":"90 derniers jours", "all":"Tout l'historique disponible"};
+
+function buildTrendReportHtml(windowDays, data){
+  var label = WINDOW_LABELS[windowDays] || windowDays;
+  var body;
+  if(!data.pareto.length){
+    body = '<div class="ralert rempty" style="text-align:center;">Aucune non-conformité enregistrée sur cette période — '+
+      (data.shiftsAnalyses===0 ? "l'historique se construit à chaque nouveau quart démarré, reviens dans quelques jours." : "tous les quarts analysés étaient conformes.")+
+      '</div>';
+  } else {
+    var rows = data.pareto.map(function(x){
+      var sev = x.occurrences >= 5 ? "rbadge-nc" : (x.occurrences >= 3 ? "rbadge-warn" : "rbadge-ok");
+      var label2 = x.occurrences >= 5 ? "Critique" : (x.occurrences >= 3 ? "Systémique" : "À surveiller");
+      return '<tr><td class="rwrap">'+escapeHtml(x.defaut)+'</td>'+
+        '<td class="rcell-center">'+x.occurrences+'</td>'+
+        '<td class="rcell-center">'+x.joursDistincts+'</td>'+
+        '<td class="rwrap">'+escapeHtml(x.lignesTouchees)+'</td>'+
+        '<td class="rcell-center"><span class="rbadge '+sev+'">'+label2+'</span></td></tr>';
+    }).join("");
+    body = '<table style="table-layout:fixed;">'+
+        '<colgroup><col style="width:24%;"><col style="width:13%;"><col style="width:13%;"><col style="width:24%;"><col style="width:26%;"></colgroup>'+
+        '<tr><th>Défaut</th><th>Occurrences</th><th>Jours touchés</th><th>Lignes concernées</th><th>Sévérité</th></tr>'+rows+
+      '</table>'+
+      '<div class="ralert" style="border-left-color:#b3261e;margin-top:8px;">Un défaut qui revient sur plusieurs jours et plusieurs quarts signale une cause systémique (usure d\'équipement, dérive process) plutôt qu\'un incident isolé — priorité recommandée pour l\'action préventive et la maintenance.</div>';
+  }
+  return (
+    '<div class="report-doc" id="extract3DocInner">'+
+      '<div class="rheader">'+
+        '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
+        '<div><div class="rtitle">📈 Tendance multi-quarts</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+      '</div>'+
+      '<div class="rmeta-grid">'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Fenêtre</span><b>'+escapeHtml(label)+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>Quarts analysés</span><b>'+data.shiftsAnalyses+'</b></div></div>'+
+        '<div class="rmeta-col"><div class="rmeta-item"><span>NC totales</span><b>'+data.totalNC+'</b></div></div>'+
+      '</div>'+
+      body+
+      '<div class="rfoot"><span>Analyse de tendance — détection automatique de récurrence</span><span>MIBEM COMPANY — QHSE</span></div>'+
+    '</div>'
+  );
+}
+
+function renderExtract3Preview(){
+  var host = $("#extract3PreviewHost");
+  if(!host) return;
+  var windowDays = $("#extract3-window").value;
+  host.innerHTML = '<p class="hint">Analyse en cours…</p>';
+  computeMultiShiftRecurrence(windowDays).then(function(data){
+    host.innerHTML = buildTrendReportHtml(windowDays, data);
+    $("#extract3ExportRow").style.display = "block";
+  }).catch(function(err){
+    console.error(err);
+    host.innerHTML = '<p class="hint">⚠️ Impossible de lire l\'historique de tendance sur cet appareil.</p>';
+  });
+}
+
+function buildExtract3ExcelWorkbook(data, windowDays){
+  var sheet = data.pareto.length ? data.pareto.map(function(x){
+    return {"Défaut": x.defaut, "Occurrences": x.occurrences, "Jours distincts touchés": x.joursDistincts, "Lignes concernées": x.lignesTouchees};
+  }) : [{"Défaut":"Aucune non-conformité sur cette période", "Occurrences":"", "Jours distincts touchés":"", "Lignes concernées":""}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheet), "Tendance ("+(WINDOW_LABELS[windowDays]||windowDays)+")");
+  var detailSheet = data.entries.map(function(n){
+    return {"Date": n.date, "Quart": n.quart, "Ligne": n.ligne, "Produit": n.produit, "Lot": n.lot,
+      "Paramètre": n.parametre, "Défaut": n.defaut, "Classe": n.classeDefaut, "Cause": n.cause,
+      "Action préventive": n.actionPreventive, "Efficacité": n.verifEfficacite, "Traitée": n.ncTraitee};
+  });
+  if(detailSheet.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailSheet), "Détail NC");
+  return wb;
+}
+
+/* ===================== SENSIBILISATION OPÉRATEURS (message automatique) =====================
+   Construit un message de sensibilisation prêt à transmettre, à partir des données
+   déjà saisies — aucune rédaction manuelle. Combine : les non-conformités du quart en
+   cours, les points d'alerte notés, et les défauts récurrents détectés sur les 7
+   derniers jours (mêmes données que le module Tendance) pour mettre en avant les
+   paramètres à surveiller en priorité, dans une logique préventive. */
+function buildAwarenessMessage(){
+  return computeMultiShiftRecurrence("7").then(function(trend){
+    var controls = state.shiftControls;
+    var ncEntries = [];
+    controls.forEach(function(c){
+      Object.keys(c.nc).forEach(function(p){
+        var d = c.nc[p];
+        ncEntries.push({ligne:c.ligne, parametre:p, defaut:d.defaut||p, classeDefaut:d.classeDefaut||""});
+      });
+    });
+    var alertesLines = [];
+    controls.forEach(function(c){ if(c.alertes && c.alertes.trim()) alertesLines.push(c.alertes.trim()); });
+
+    var recurrents = trend.pareto.filter(function(x){ return x.occurrences >= 2; }).slice(0, 5);
+
+    var lines = [];
+    lines.push("📢 *Message de sensibilisation qualité — MIBEM COMPANY*");
+    lines.push("🗓️ "+dmy(controls.length?controls[0].date:todayISO())+" · Quart "+(controls.length?controls[0].quart:getQuart()));
+    lines.push("");
+
+    if(ncEntries.length){
+      lines.push("⚠️ "+ncEntries.length+" non-conformité(s) détectée(s) ce quart :");
+      ncEntries.slice(0,8).forEach(function(n){
+        lines.push("• "+n.parametre+" ("+n.ligne+")"+(n.defaut && n.defaut!==n.parametre ? " — "+n.defaut : "")+(n.classeDefaut ? " ["+n.classeDefaut+"]" : ""));
+      });
+      lines.push("");
+    } else {
+      lines.push("✅ Aucune non-conformité détectée ce quart — excellent travail, continuons ainsi !");
+      lines.push("");
+    }
+
+    if(alertesLines.length){
+      lines.push("🚩 Points d'alerte signalés :");
+      alertesLines.forEach(function(a){ lines.push("• "+a); });
+      lines.push("");
+    }
+
+    if(recurrents.length){
+      lines.push("🔁 Paramètres à surveiller en priorité (récurrents ces 7 derniers jours) :");
+      recurrents.forEach(function(x){
+        lines.push("• "+x.defaut+" — déjà observé "+x.occurrences+" fois sur "+x.joursDistincts+" jour(s), lignes : "+x.lignesTouchees);
+      });
+      lines.push("");
+    }
+
+    lines.push("✅ Merci de rester vigilants sur ces points avant et pendant votre poste.");
+    lines.push("Chaque contrôle compte pour la qualité MIBEM ! 💪");
+
+    return lines.join("\n");
+  });
+}
+
+function renderAwarenessPreview(){
+  var host = $("#awarenessPreviewHost");
+  if(!host) return;
+  host.innerHTML = '<p class="hint">Génération en cours…</p>';
+  buildAwarenessMessage().then(function(text){
+    state.lastAwarenessMessage = text;
+    host.innerHTML =
+      '<div class="chat-bubble-wrap"><div class="chat-bubble">'+escapeHtml(text).replace(/\n/g,"<br>")+
+      '<span class="cb-meta">'+(new Date()).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+' ✓✓</span>'+
+      '</div></div>';
+    $("#awarenessExportRow").style.display = "block";
+  }).catch(function(err){
+    console.error(err);
+    host.innerHTML = '<div class="chat-bubble-empty">⚠️ Impossible de générer le message pour le moment.</div>';
+  });
 }
 
 function renderSynthPreview(){
@@ -2218,96 +3902,406 @@ function renderSynthPreview(){
     return;
   }
   host.innerHTML = '<div class="card" style="padding:0;overflow:hidden;"><div id="synthDocWrap" style="padding:16px;">'+buildSynthesisHtml()+'</div>'+
-    '<div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap;">'+
-      '<button class="btn btn-primary" id="btnSynthPNG">🖼️ Exporter en image</button>'+
-      '<button class="btn btn-dark" id="btnSynthPDF">📄 Exporter en PDF</button>'+
-      '<button class="btn btn-ghost" id="btnSynthWA">📲 Partager sur WhatsApp</button>'+
-      '<button class="btn btn-dark" id="btnSynthXLSX">📊 Exporter en Excel</button>'+
+    '<div style="padding:0 16px 16px;">'+
+      '<button class="btn btn-dark btn-block" id="synthActionsTrigger">📤 Partager / Exporter</button>'+
+    '<button class="btn btn-ghost btn-block" id="btnSynthSync" style="margin-top:8px;">🔄 Synchroniser vers le tableau de bord</button>'+
     '</div></div>';
-  $("#btnSynthPNG").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "png", "MIBEM_Synthese_"+todayISO()); });
-  $("#btnSynthPDF").addEventListener("click", function(){ exportNode($("#synthDocWrap"), "pdf", "MIBEM_Synthese_"+todayISO()); });
-  $("#btnSynthWA").addEventListener("click", function(){ shareNode($("#synthDocWrap"), "MIBEM_Synthese_"+todayISO(), "Synthèse de fin de quart — MIBEM COMPANY"); });
-  $("#btnSynthXLSX").addEventListener("click", exportShiftToExcel);
+  $("#synthActionsTrigger").addEventListener("click", function(){
+    openExportSheet({title:"Synthèse de fin de quart", getNode:function(){ return $("#synthDocWrap"); },
+      filename:"MIBEM_Synthese_"+todayISO(), caption:buildSynthesisCaption(),
+      excel:{ save:exportShiftToExcel, share:function(){ shareShiftExcel(buildSynthesisCaption()); } }});
+  });
+  $("#btnSynthSync").addEventListener("click", function(){ syncToGoogleSheets(true); });
 }
 
 /* ===================== EXPORT PNG / PDF / PARTAGE ===================== */
-function exportNode(node, kind, filename){
-  toast("Génération en cours...");
-  html2canvas(node, {scale:2, backgroundColor:"#ffffff", useCORS:true}).then(function(canvas){
-    if(kind === "png"){
-      var link = document.createElement("a");
-      link.download = filename + ".png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast("Image exportée ✔");
-    } else {
-      var imgData = canvas.toDataURL("image/png");
-      var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-      var pdf = new jsPDFCtor({unit:"pt", format:"a4"});
-      var pageW = pdf.internal.pageSize.getWidth();
-      var pageH = pdf.internal.pageSize.getHeight();
-      var imgW = pageW - 40;
-      var imgH = imgW * canvas.height / canvas.width;
-      var y = 20;
-      if(imgH <= pageH - 40){
-        pdf.addImage(imgData, "PNG", 20, y, imgW, imgH);
-      } else {
-        // découpage sur plusieurs pages
-        var ratio = canvas.width / imgW;
-        var pageCanvasHeight = (pageH - 40) * ratio;
-        var totalHeight = canvas.height;
-        var offset = 0;
-        var first = true;
-        while(offset < totalHeight){
-          var sliceH = Math.min(pageCanvasHeight, totalHeight - offset);
-          var sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceH;
-          var ctx = sliceCanvas.getContext("2d");
-          ctx.drawImage(canvas, 0, offset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          var sliceData = sliceCanvas.toDataURL("image/png");
-          if(!first) pdf.addPage();
-          pdf.addImage(sliceData, "PNG", 20, 20, imgW, sliceH/ratio);
-          offset += sliceH;
-          first = false;
-        }
-      }
-      pdf.save(filename + ".pdf");
-      toast("PDF exporté ✔");
+/* ===================== UTILITAIRES NATIFS (Galerie photo + Documents Android) ===================== */
+/* ===================== MENU D'ACTIONS UNIFIÉ (générique, réutilisé partout) ===================== */
+function wireActionsMenu(triggerId, dropdownId){
+  var trigger = $(triggerId), dropdown = $(dropdownId);
+  if(!trigger || !dropdown) return;
+  trigger.addEventListener("click", function(e){
+    e.stopPropagation();
+    var wasOpen = dropdown.classList.contains("open");
+    $all(".actions-menu-dropdown").forEach(function(d){ d.classList.remove("open"); });
+    $all(".actions-menu-trigger").forEach(function(t){ t.classList.remove("open"); });
+    if(!wasOpen){ dropdown.classList.add("open"); trigger.classList.add("open"); }
+  });
+  dropdown.addEventListener("click", function(e){
+    if(e.target.closest(".actions-menu-item")){
+      dropdown.classList.remove("open");
+      trigger.classList.remove("open");
     }
-  }).catch(function(err){
-    console.error(err);
-    toast("Erreur lors de l'export.");
+  });
+}
+document.addEventListener("click", function(){
+  $all(".actions-menu-dropdown").forEach(function(d){ d.classList.remove("open"); });
+  $all(".actions-menu-trigger").forEach(function(t){ t.classList.remove("open"); });
+});
+
+function isNativeApp(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+/* Partage un texte simple (pas de fichier) — utilisé pour le message de sensibilisation,
+   qui doit s'ouvrir directement dans WhatsApp comme un message prêt à envoyer, pas
+   comme une pièce jointe. */
+function shareTextMessage(text){
+  if(isNativeApp() && window.Capacitor.Plugins.Share){
+    window.Capacitor.Plugins.Share.share({ text: text, dialogTitle: "Transmettre à l'équipe" })
+      .catch(function(err){ console.error(err); toast("Erreur lors du partage."); });
+    return;
+  }
+  if(navigator.share){
+    navigator.share({ text: text }).catch(function(){});
+    return;
+  }
+  copyTextToClipboard(text);
+  toast("Partage direct indisponible ici — texte copié, colle-le dans WhatsApp.");
+}
+function copyTextToClipboard(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  var ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
+
+function blobToBase64(blob){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onloadend = function(){
+      var s = reader.result;
+      resolve(s.substring(s.indexOf(",")+1));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
 
-function shareNode(node, filename, text){
-  toast("Préparation du partage...");
-  html2canvas(node, {scale:2, backgroundColor:"#ffffff", useCORS:true}).then(function(canvas){
-    canvas.toBlob(function(blob){
-      var file = new File([blob], filename+".png", {type:"image/png"});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        navigator.share({files:[file], title:"MIBEM — Contrôle qualité", text:text})
-          .then(function(){ toast("Partagé ✔"); })
-          .catch(function(){});
+var MIBEM_ALBUM_NAME = "MIBEM QHSE";
+function ensureMibemAlbum(){
+  var Media = window.Capacitor.Plugins.Media;
+  if(state._mibemAlbumId) return Promise.resolve(state._mibemAlbumId);
+  return Media.getAlbums().then(function(res){
+    var found = (res.albums||[]).find(function(a){ return a.name === MIBEM_ALBUM_NAME; });
+    if(found){ state._mibemAlbumId = found.identifier; return found.identifier; }
+    return Media.createAlbum({name: MIBEM_ALBUM_NAME}).then(function(){
+      return Media.getAlbums();
+    }).then(function(res2){
+      var found2 = (res2.albums||[]).find(function(a){ return a.name === MIBEM_ALBUM_NAME; });
+      state._mibemAlbumId = found2 ? found2.identifier : undefined;
+      return state._mibemAlbumId;
+    });
+  });
+}
+
+/* Enregistre une image (PNG) dans la vraie Galerie photo Android, dans un album "MIBEM QHSE" */
+function saveImageToNativeGallery(dataUrl, fileName){
+  var Media = window.Capacitor.Plugins.Media;
+  return ensureMibemAlbum().then(function(albumId){
+    return Media.savePhoto({ path: dataUrl, albumIdentifier: albumId, fileName: fileName });
+  });
+}
+
+/* Enregistre un document (PDF, Excel...) dans le dossier Documents réel de l'appareil */
+/* Demande la permission de stockage public si nécessaire (obligatoire sur certaines
+   versions d'Android avant d'écrire dans Documents ; ignoré sans erreur si l'appareil
+   n'en a pas besoin — Android 10+ gère cela différemment en interne). */
+function ensureStoragePermission(){
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  if(!Filesystem.checkPermissions || !Filesystem.requestPermissions){
+    return Promise.resolve();
+  }
+  return Filesystem.checkPermissions().then(function(status){
+    if(status && status.publicStorage === "granted") return;
+    return Filesystem.requestPermissions().catch(function(){});
+  }).catch(function(){});
+}
+
+function saveDocumentToNativeStorage(base64Data, fileName){
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  return ensureStoragePermission().then(function(){
+    return Filesystem.writeFile({
+      path: fileName,
+      data: base64Data,
+      directory: "DOCUMENTS",
+      recursive: true
+    });
+  });
+}
+
+/* Construit le PDF (haute résolution, sans perte) à partir d'un nœud du rapport.
+   Retourne { blob, base64 (sans préfixe data:), dataUri } */
+/* Génère le PDF section par section plutôt qu'en une seule capture découpée à l'aveugle :
+   chaque grille de photos (.rphotos-a4-page) obtient sa PROPRE page, jamais coupée en deux
+   entre deux pages — c'est ce qui corrige les "éléments discontinus" du PDF partagé. */
+/* Largeur de rendu FIXE pour tous les exports (image/PDF), indépendante de la largeur
+   réelle de l'écran du téléphone (souvent ~380px, ce qui forçait un retour à la ligne
+   lettre par lettre). 780px correspond à une largeur de page A4 utilisable à 96dpi. */
+var EXPORT_WIDTH_PX = 780;
+
+/* Clone le contenu du rapport dans un conteneur hors-écran à largeur fixe A4, pour que
+   la capture (html2canvas) ne dépende jamais de la largeur du viewport mobile. */
+function cloneForExport(node){
+  var contentRoot = node.querySelector(".report-doc") || node;
+  var wrapper = document.createElement("div");
+  wrapper.className = contentRoot.className;
+  wrapper.style.position = "fixed";
+  wrapper.style.left = "-99999px";
+  wrapper.style.top = "0";
+  wrapper.style.width = EXPORT_WIDTH_PX + "px";
+  wrapper.style.background = "#ffffff";
+  wrapper.appendChild(contentRoot.cloneNode(true));
+  document.body.appendChild(wrapper);
+  // Agrandir les photos UNIQUEMENT pour l'export (jamais dans l'app) : une case
+  // plus grande au moment de la capture donne directement bien plus de pixels
+  // réels dans le PDF/l'image finale, sans aucune manipulation fragile après coup.
+  // Galeries de preuves : 2 photos par ligne jusqu'à 6 photos, 3 par ligne au-delà
+  // (jamais 4) — chaque photo reste grande et lisible, et la coupe de page tombe
+  // toujours entre deux lignes. Les photos "grandes" (fiche du quart) sont inchangées.
+  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery:not(.rgallery-large)"), function(g){
+    var cells = g.querySelectorAll(".rgallery-cell");
+    var perRow = cells.length > 6 ? 3 : 2;
+    var h = perRow === 2 ? 250 : 190;
+    g.style.gap = "10px";
+    Array.prototype.forEach.call(cells, function(c){
+      c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
+      var im = c.querySelector("img");
+      if(im){ im.style.height = h + "px"; im.style.minHeight = h + "px"; }
+    });
+  });
+  return wrapper;
+}
+
+function buildPdfFromNode(node){
+  var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+  var pdf = new jsPDFCtor({unit:"pt", format:"a4"});
+  var pageW = pdf.internal.pageSize.getWidth();
+  var pageH = pdf.internal.pageSize.getHeight();
+  var margin = 20;
+  var maxW = pageW - margin*2;
+  var maxH = pageH - margin*2;
+  var SCALE = 1.75;
+
+  // Capture UNIQUE et continue de tout le rapport (photos incluses, agrandies par
+  // cloneForExport). Avant de lancer la capture, on mesure la position verticale de
+  // chaque bloc direct du rapport (en-tête, chaque tableau, chaque galerie de
+  // photos...) — ce sont les SEULES frontières où un saut de page est autorisé.
+  // Sans ça, une page pouvait couper une photo ou un tableau pile au milieu.
+  var wrapper = cloneForExport(node);
+  var reportClone = wrapper.firstChild;
+  var wrapperTop = wrapper.getBoundingClientRect().top;
+  var blockBoundaries = [];
+  Array.prototype.forEach.call(reportClone.children, function(child){
+    // Un titre de section (h3) ne doit jamais devenir un point de coupure : ça
+    // laisserait le titre seul en bas d'une page, séparé du tableau ou de la
+    // galerie qu'il annonce juste en dessous (c'est ce qui créait le grand vide
+    // sous "PHOTOS DE LA NON-CONFORMITÉ"). Sa frontière est donc ignorée — la
+    // coupure se reporte automatiquement sur l'élément précédent, et le titre
+    // voyage toujours avec son contenu vers la page suivante si besoin.
+    var isHeading = child.tagName === "H3" && child.classList.contains("rsection");
+    if(isHeading) return;
+    var r = child.getBoundingClientRect();
+    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
+  });
+  // Sécurité supplémentaire : si une galerie à elle seule dépasse une page entière
+  // (beaucoup de photos), on ajoute aussi la frontière basse de chaque vignette —
+  // ainsi, même dans ce cas rare, la coupure tombe toujours entre deux rangées de
+  // photos, jamais au milieu d'une image.
+  Array.prototype.forEach.call(reportClone.querySelectorAll(".rgallery-cell"), function(cell){
+    var r = cell.getBoundingClientRect();
+    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
+  });
+
+  return html2canvas(wrapper, {scale:SCALE, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    document.body.removeChild(wrapper);
+    var imgW = maxW;
+    var ratio = canvas.width / imgW;
+    var pageCanvasHeight = maxH * ratio;
+
+    var pages = [];
+    var cursor = 0;
+    while(cursor < canvas.height){
+      var limit = cursor + pageCanvasHeight;
+      if(limit >= canvas.height){ pages.push({from:cursor, to:canvas.height}); break; }
+      // La plus grande frontière de bloc qui tient encore dans cette page.
+      var cut = 0;
+      blockBoundaries.forEach(function(b){ if(b > cursor && b <= limit) cut = Math.max(cut, b); });
+      if(!cut) cut = Math.floor(limit); // bloc plus grand qu'une page entière : dernier recours
+      pages.push({from:cursor, to:cut});
+      cursor = cut;
+    }
+
+    pages.forEach(function(p, i){
+      var sliceH = p.to - p.from;
+      if(sliceH <= 0) return;
+      var sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceH;
+      var ctx = sliceCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceH);
+      ctx.drawImage(canvas, 0, p.from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(i>0) pdf.addPage();
+      pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.82), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
+      sliceCanvas.width = sliceCanvas.height = 0;
+    });
+
+    var dataUri = pdf.output("datauristring");
+    var base64 = dataUri.substring(dataUri.indexOf(",")+1);
+    var blob = pdf.output("blob");
+    return { blob: blob, base64: base64, dataUri: dataUri };
+  }).catch(function(err){
+    if(wrapper.parentNode) document.body.removeChild(wrapper);
+    throw err;
+  });
+}
+
+function exportNode(node, kind, filename){
+  toast("Génération en cours...");
+  if(kind === "png"){
+    var exportWrapper = cloneForExport(node);
+    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+      document.body.removeChild(exportWrapper);
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      if(isNativeApp() && window.Capacitor.Plugins.Media){
+        saveImageToNativeGallery(dataUrl, filename)
+          .then(function(){ toast("✔ Enregistré dans Galerie photo > "+MIBEM_ALBUM_NAME); })
+          .catch(function(err){ console.error(err); toast("Impossible d'enregistrer dans la galerie."); });
       } else {
         var link = document.createElement("a");
-        link.download = filename + ".png";
-        link.href = canvas.toDataURL("image/png");
+        link.download = filename + ".jpg";
+        link.href = dataUrl;
         link.click();
-        window.open("https://wa.me/?text=" + encodeURIComponent(text + " (image téléchargée, à joindre manuellement dans WhatsApp)"), "_blank");
-        toast("Image téléchargée — ouvrez WhatsApp pour la joindre.");
+        toast("Image exportée ✔");
       }
-    }, "image/png");
+    }).catch(function(err){
+      console.error(err);
+      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
+      toast("Erreur lors de l'export.");
+    });
+  } else {
+    buildPdfFromNode(node).then(function(pdfResult){
+      if(isNativeApp() && window.Capacitor.Plugins.Filesystem){
+        saveDocumentToNativeStorage(pdfResult.base64, filename+".pdf")
+          .then(function(){ toast("✔ Enregistré : Fichiers > Documents > "+filename+".pdf"); })
+          .catch(function(err){
+            console.error(err);
+            toast("Enregistrement direct impossible — choisissez où l'enregistrer :");
+            offerNativeSaveFallback(pdfResult.base64, filename+".pdf", "application/pdf");
+          });
+      } else {
+        var link = document.createElement("a");
+        link.download = filename + ".pdf";
+        link.href = pdfResult.dataUri;
+        link.click();
+        toast("PDF exporté ✔");
+      }
+    }).catch(function(err){ console.error(err); toast("Erreur lors de l'export."); });
+  }
+}
+
+/* Filet de sécurité : si l'écriture directe dans Documents échoue (permission refusée,
+   restriction du fabricant, etc.), on ouvre le partage natif Android — l'utilisateur peut
+   alors choisir "Fichiers", "Drive" ou toute autre app pour enregistrer le fichier lui-même,
+   ce qui fonctionne toujours, quel que soit l'appareil. */
+function offerNativeSaveFallback(base64, fileName, mimeType){
+  if(!(isNativeApp() && window.Capacitor.Plugins.Filesystem && window.Capacitor.Plugins.Share)) return;
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  var Share = window.Capacitor.Plugins.Share;
+  Filesystem.writeFile({ path: fileName, data: base64, directory: "CACHE" })
+    .then(function(){ return Filesystem.getUri({ path: fileName, directory: "CACHE" }); })
+    .then(function(uriResult){
+      return Share.share({
+        title: "Enregistrer le fichier MIBEM",
+        files: [uriResult.uri],
+        dialogTitle: "Choisir où enregistrer ce fichier"
+      });
+    })
+    .catch(function(err){ console.error(err); toast("Impossible d'ouvrir les options d'enregistrement."); });
+}
+
+/* ===================== PARTAGE (natif Android via Capacitor, ou Web Share / téléchargement) =====================
+   Le partage envoie désormais un PDF plutôt qu'une image : WhatsApp compresse fortement
+   toute image envoyée comme "photo", mais ne recompresse jamais un PDF — c'est ce qui
+   garantit un rendu net et fidèle, sans aucune perte de qualité. */
+function shareViaNativeAndroid(base64, filename, mimeType, text){
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  var Share = window.Capacitor.Plugins.Share;
+  return Filesystem.writeFile({
+    path: filename,
+    data: base64,
+    directory: "CACHE"
+  }).then(function(){
+    return Filesystem.getUri({ path: filename, directory: "CACHE" });
+  }).then(function(uriResult){
+    return Share.share({
+      title: "MIBEM — Contrôle qualité",
+      text: text,
+      files: [uriResult.uri],
+      dialogTitle: "Partager le rapport MIBEM"
+    });
   });
+}
+
+function shareNode(node, filename, text, kind){
+  kind = kind || "pdf";
+  if(kind === "png"){
+    toast("Préparation de l'image...");
+    var exportWrapper = cloneForExport(node);
+    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+      document.body.removeChild(exportWrapper);
+      canvas.toBlob(function(blob){
+        blobToBase64(blob).then(function(base64){
+          shareBlobOrDownload(base64, blob, filename+".jpg", "image/jpeg", text, "image");
+        });
+      }, "image/jpeg", 0.85);
+    }).catch(function(err){
+      console.error(err);
+      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
+      toast("Erreur lors de la préparation du partage.");
+    });
+    return;
+  }
+  toast("Préparation du PDF (qualité maximale, non compressé par WhatsApp)...");
+  buildPdfFromNode(node).then(function(pdfResult){
+    shareBlobOrDownload(pdfResult.base64, pdfResult.blob, filename+".pdf", "application/pdf", text, "PDF haute qualité");
+  }).catch(function(err){ console.error(err); toast("Erreur lors de la préparation du partage."); });
+}
+
+/* Partage un fichier déjà généré (PDF, image ou Excel) via le partage natif Android,
+   avec repli sur le Web Share API puis le téléchargement classique. Réutilisé par tous
+   les formats d'export pour que "partager vers les réseaux" fonctionne partout. */
+function shareBlobOrDownload(base64, blob, filename, mimeType, text, label){
+  if(isNativeApp() && window.Capacitor.Plugins.Share && window.Capacitor.Plugins.Filesystem){
+    shareViaNativeAndroid(base64, filename, mimeType, text)
+      .then(function(){ toast("Partagé ✔ ("+label+")"); })
+      .catch(function(err){ console.error(err); toast("Partage annulé ou impossible."); });
+    return;
+  }
+  var file = new File([blob], filename, {type: mimeType});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], title:"MIBEM — Contrôle qualité", text:text})
+      .then(function(){ toast("Partagé ✔ ("+label+")"); })
+      .catch(function(){});
+  } else {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.download = filename;
+    link.href = url;
+    link.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    toast("Fichier téléchargé — partagez-le depuis vos téléchargements.");
+  }
 }
 
 /* ===================== EXPORT EXCEL (fusion tableau de bord QHSE) ===================== */
-function exportShiftToExcel(){
-  if(state.shiftControls.length === 0){
-    toast("Aucun contrôle à exporter.");
-    return;
-  }
+function buildShiftExcelWorkbook(){
   var controls = state.shiftControls;
 
   // Feuille 1 : Contrôles (une ligne par contrôle, prête pour Pareto / KPI)
@@ -2324,6 +4318,7 @@ function exportShiftToExcel(){
       "Date": dmy(c.date),
       "Quart": c.quart,
       "Heure": c.heure,
+      "Site": c.site || "",
       "Ligne / Machine": c.ligne,
       "Emballage": c.emballage,
       "Format": c.format,
@@ -2387,8 +4382,11 @@ function exportShiftToExcel(){
         "NC traitée": d.ncTraitee || "Non",
         "Précisions clôture": d.clotureDetails || "",
         "Causes de la non-conformité": d.cause || "",
+        "Action préventive": d.actionPreventive || "",
+        "Efficacité vérifiée": d.verifEfficacite || "À vérifier",
         "Nb photos jointes": (d.photos||[]).length,
-        "Contrôleur": c.controleur
+        "Contrôleur": c.controleur,
+        "Site": c.site || ""
       });
     });
   });
@@ -2410,10 +4408,93 @@ function exportShiftToExcel(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetParametres), "Détail paramètres");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetNC), "Non-conformités");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetAlertes), "Points d'alerte");
+  return wb;
+}
 
+function exportShiftToExcel(){
+  if(state.shiftControls.length === 0){
+    toast("Aucun contrôle à exporter.");
+    return;
+  }
+  var wb = buildShiftExcelWorkbook();
   var filename = "MIBEM_QHSE_Export_" + todayISO() + ".xlsx";
-  XLSX.writeFile(wb, filename);
-  toast("Export Excel généré ✔");
+  if(isNativeApp() && window.Capacitor.Plugins.Filesystem){
+    var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+    saveDocumentToNativeStorage(base64, filename)
+      .then(function(){ toast("✔ Enregistré : Fichiers > Documents > "+filename); })
+      .catch(function(err){
+        console.error(err);
+        toast("Enregistrement direct impossible — choisissez où l'enregistrer :");
+        offerNativeSaveFallback(base64, filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      });
+  } else {
+    XLSX.writeFile(wb, filename);
+    toast("Export Excel généré ✔");
+  }
+}
+
+function shareExtractExcel(wb, filename, text){
+  toast("Préparation du fichier Excel...");
+  var mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+  var blob = new Blob([XLSX.write(wb, {bookType:"xlsx", type:"array"})], {type: mimeType});
+  shareBlobOrDownload(base64, blob, filename, mimeType, text, "Excel");
+}
+
+/* ===== Feuille unique "Partager / Exporter" : un seul bouton par document, un seul
+   endroit où choisir le format (PDF, Image, Excel) puis Partager ou Enregistrer. ===== */
+var exportCfg = null, exportFmt = "pdf";
+var EXPORT_FMT_HINTS = {
+  pdf: "PDF : qualité préservée, non recompressé par WhatsApp (recommandé).",
+  png: "Image : rapide à voir, mais WhatsApp peut la compresser.",
+  xlsx: "Excel : données exploitables (tableaux, filtres)."
+};
+function renderExportSheet(){
+  var fmts = [["pdf","📄 PDF"],["png","🖼️ Image"]];
+  if(exportCfg && exportCfg.excel) fmts.push(["xlsx","📊 Excel"]);
+  $("#exportChips").innerHTML = fmts.map(function(f){
+    return '<button type="button" class="export-chip'+(f[0]===exportFmt?' on':'')+'" data-fmt="'+f[0]+'">'+f[1]+'</button>';
+  }).join("");
+  $("#exportFmtHint").textContent = EXPORT_FMT_HINTS[exportFmt] || "";
+}
+function openExportSheet(cfg){
+  exportCfg = cfg; exportFmt = "pdf";
+  $("#exportSheetTitle").textContent = cfg.title || "Partager / Exporter";
+  renderExportSheet();
+  $("#exportSheet").classList.add("show");
+}
+function runExport(act){
+  var cfg = exportCfg; if(!cfg) return;
+  $("#exportSheet").classList.remove("show");
+  if(exportFmt === "xlsx"){ if(cfg.excel && cfg.excel[act]) cfg.excel[act](); return; }
+  var node = cfg.getNode();
+  if(!node || !node.innerHTML){ toast("Rien à exporter pour le moment."); return; }
+  if(act === "share") shareNode(node, cfg.filename, cfg.caption, exportFmt);
+  else exportNode(node, exportFmt, cfg.filename);
+}
+function wireExportSheet(){
+  $("#exportChips").addEventListener("click", function(e){
+    var b = e.target.closest("[data-fmt]"); if(!b) return;
+    exportFmt = b.getAttribute("data-fmt"); renderExportSheet();
+  });
+  $("#exportDoShare").addEventListener("click", function(){ runExport("share"); });
+  $("#exportDoSave").addEventListener("click", function(){ runExport("save"); });
+  $("#exportSheetClose").addEventListener("click", function(){ $("#exportSheet").classList.remove("show"); });
+  $("#exportSheet").addEventListener("click", function(e){ if(e.target.id === "exportSheet") $("#exportSheet").classList.remove("show"); });
+}
+
+function shareShiftExcel(text){
+  if(state.shiftControls.length === 0){
+    toast("Aucun contrôle à partager.");
+    return;
+  }
+  toast("Préparation du fichier Excel...");
+  var wb = buildShiftExcelWorkbook();
+  var filename = "MIBEM_QHSE_Export_" + todayISO() + ".xlsx";
+  var mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var base64 = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+  var blob = new Blob([XLSX.write(wb, {bookType:"xlsx", type:"array"})], {type: mimeType});
+  shareBlobOrDownload(base64, blob, filename, mimeType, text, "Excel");
 }
 
 /* ===================== GESTION DU CATALOGUE (PARAMÈTRES) ===================== */
@@ -2422,6 +4503,7 @@ function refreshDependentSelectsAfterCatalogChange(){
   var curProduit = $("#f-produit") ? $("#f-produit").value : "";
   fillMachineSelect();
   fillProduitSelect();
+  fillSiteSelect();
   if($("#f-machine")) $("#f-machine").value = curMachine;
   if($("#f-produit")) $("#f-produit").value = curProduit;
   renderNcBlocks();
@@ -2551,15 +4633,219 @@ function renderMachinesEditor(){
   });
 }
 
+/* Estimation de l'espace de stockage utilisé (IndexedDB : quart en cours + historique
+   de tendance). navigator.storage.estimate() est largement supporté sur Android/Chrome
+   mais pas partout (ex. anciens WebView) — on gère l'absence proprement plutôt que de
+   planter ou d'afficher une erreur brute. */
+function renderStorageUsage(){
+  var host = $("#storageUsageResult");
+  if(!host) return;
+  if(!(navigator.storage && navigator.storage.estimate)){
+    host.innerHTML = '<p class="hint">Indicateur non disponible sur cet appareil/navigateur.</p>';
+    return;
+  }
+  navigator.storage.estimate().then(function(est){
+    var usedMB = ((est.usage||0)/1024/1024).toFixed(1);
+    var quotaMB = ((est.quota||0)/1024/1024).toFixed(0);
+    var pct = est.quota ? Math.min(100, Math.round((est.usage/est.quota)*100)) : 0;
+    var barClass = pct >= 85 ? "rbadge-nc" : (pct >= 60 ? "rbadge-warn" : "rbadge-ok");
+    host.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+        '<span>'+usedMB+' Mo utilisés sur '+quotaMB+' Mo disponibles</span>'+
+        '<span class="rbadge '+barClass+'" style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700;">'+pct+' %</span>'+
+      '</div>'+
+      '<div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;">'+
+        '<div style="background:'+(pct>=85?"#b3261e":pct>=60?"#8a6100":"#1d7a3c")+';height:100%;width:'+pct+'%;"></div>'+
+      '</div>'+
+      (pct >= 85 ? '<p class="hint" style="color:#b3261e;margin-top:6px;">⚠️ Espace bientôt saturé — exporte et démarre un nouveau quart pour libérer de la place.</p>' : '');
+  }).catch(function(){
+    host.innerHTML = '<p class="hint">Impossible de calculer l\'espace utilisé pour le moment.</p>';
+  });
+}
+
 function renderAllSettings(){
   renderGroupedEditor("#settingsProduits", "produits", "un produit");
   renderGroupedEditor("#settingsDefauts", "defauts", "un défaut");
   renderFlatEditor("#settingsNiveaux", "niveaux");
   renderFlatEditor("#settingsClasses", "classes");
+  renderFlatEditor("#settingsSites", "sites");
   renderMachinesEditor();
 }
 
+/* ===================== VÉRIFICATION DES MISES À JOUR (GitHub Releases) ===================== */
+function compareVersions(a, b){
+  // Compare deux versions "x.y.z" -> -1 si a<b, 0 si égales, 1 si a>b
+  var pa = String(a).replace(/^v/i,"").split(".").map(function(n){ return parseInt(n,10)||0; });
+  var pb = String(b).replace(/^v/i,"").split(".").map(function(n){ return parseInt(n,10)||0; });
+  for(var i=0; i<Math.max(pa.length, pb.length); i++){
+    var x = pa[i]||0, y = pb[i]||0;
+    if(x<y) return -1;
+    if(x>y) return 1;
+  }
+  return 0;
+}
+
+/* ===================== SONS D'ALERTE (générés, sans fichier audio externe) ===================== */
+function soundsEnabled(){
+  var el = $("#soundAlertsToggle");
+  return el ? el.checked : true;
+}
+function playTone(freqs, durationMs){
+  if(!soundsEnabled()) return;
+  try{
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    var ctx = new Ctx();
+    freqs.forEach(function(freq, i){
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      var start = ctx.currentTime + i*(durationMs/1000);
+      gain.gain.exponentialRampToValueAtTime(0.25, start+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + durationMs/1000);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + durationMs/1000 + 0.02);
+    });
+    setTimeout(function(){ ctx.close && ctx.close(); }, freqs.length*durationMs + 200);
+  }catch(e){}
+}
+function playAlertCritical(){ playTone([880, 660, 880], 160); }
+function playSyncSuccess(){ playTone([523, 784], 120); }
+function playSyncError(){ playTone([300, 220], 220); }
+
+/* ===================== SYNCHRONISATION TABLEAU DE BORD (Google Sheets via Apps Script) ===================== */
+var SYNC_URL_KEY = "mibem_qhse_sync_url_v1";
+function loadSyncUrl(){ return safeLocalStorageGet(SYNC_URL_KEY) || ""; }
+function saveSyncUrl(url){
+  if(url && url.indexOf("https://") !== 0){
+    toast("⚠️ L'URL doit commencer par https:// — synchronisation non enregistrée.");
+    return false;
+  }
+  safeLocalStorageSet(SYNC_URL_KEY, url);
+  return true;
+}
+
+function buildSyncPayload(){
+  var controls = state.shiftControls;
+  var visa = $("#synth-visa") ? ($("#synth-visa").value || "") : "";
+  var ncRows = [];
+  controls.forEach(function(c){
+    Object.keys(c.nc).forEach(function(p){
+      var d = c.nc[p];
+      ncRows.push({
+        date: c.date, quart: c.quart, heure: c.heure, ligne: c.ligne,
+        produit: c.produit, lot: c.lot, parametre: p,
+        description: d.description||"", niveau: d.niveau||"", defaut: d.defaut||"",
+        quantite: d.quantite||"", classeDefaut: d.classeDefaut||"",
+        actionImmediate: d.actionImmediate||"", ncTraitee: d.ncTraitee||"Non",
+        cause: d.cause||"", actionPreventive: d.actionPreventive||"",
+        verifEfficacite: d.verifEfficacite||"À vérifier", controleur: c.controleur||""
+      });
+    });
+  });
+  return {
+    source: "MIBEM_QHSE_App",
+    version: APP_VERSION,
+    envoye_le: new Date().toISOString(),
+    quart: {
+      date: controls.length ? controls[0].date : todayISO(),
+      quart: controls.length ? controls[0].quart : "",
+      visa: visa,
+      nb_controles: controls.length,
+      nb_nc: ncRows.length
+    },
+    non_conformites: ncRows
+  };
+}
+
+function syncToGoogleSheets(showToast){
+  var url = loadSyncUrl();
+  if(!url){
+    if(showToast) toast("Aucune URL de synchronisation configurée (voir Paramètres).");
+    return Promise.resolve(false);
+  }
+  if(typeof fetch === "undefined"){
+    if(showToast) toast("Synchronisation indisponible sur ce navigateur.");
+    return Promise.resolve(false);
+  }
+  var payload = buildSyncPayload();
+  return fetch(url, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify(payload)
+  }).then(function(){
+    // mode no-cors : impossible de lire la vraie réponse, on considère l'envoi réussi
+    // si aucune erreur réseau ne s'est produite.
+    playSyncSuccess();
+    if(showToast) toast("Synchronisé vers le tableau de bord ✔");
+    return true;
+  }).catch(function(err){
+    playSyncError();
+    if(showToast) toast("Échec de la synchronisation — vérifiez votre connexion.");
+    return false;
+  });
+}
+
+function checkForUpdates(){
+  var host = $("#updateCheckResult");
+  if(typeof fetch === "undefined"){
+    if(host) host.innerHTML = '<div class="hint">Vérification des mises à jour non disponible sur ce navigateur.</div>';
+    return;
+  }
+  if(!host) return;
+  if(APP_VERSION.indexOf("__") === 0){
+    host.innerHTML = '<div class="hint">Version de développement — vérification des mises à jour désactivée.</div>';
+    return;
+  }
+  host.innerHTML = '<div class="hint">Vérification en cours…</div>';
+  var url = "https://api.github.com/repos/"+encodeURIComponent(GITHUB_OWNER)+"/"+encodeURIComponent(GITHUB_REPO)+"/releases/latest";
+  fetch(url, {headers:{"Accept":"application/vnd.github+json"}})
+    .then(function(r){
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(function(data){
+      var latestTag = (data.tag_name || "").replace(/^v/i,"");
+      if(!latestTag){ throw new Error("réponse invalide"); }
+      if(compareVersions(latestTag, APP_VERSION) > 0){
+        var apkAsset = (data.assets||[]).find(function(a){ return /\.apk$/i.test(a.name); });
+        var link = apkAsset ? apkAsset.browser_download_url : data.html_url;
+        host.innerHTML =
+          '<div class="alert-box" style="border-color:var(--nc);background:#fdf0ee;color:#7a2015;">'+
+            '🚨 Nouvelle version disponible : <b>v'+escapeHtml(latestTag)+'</b> (vous avez v'+escapeHtml(APP_VERSION)+')<br>'+
+            '<a href="'+escapeHtml(link)+'" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:8px;display:inline-block;text-decoration:none;">⬇️ Télécharger la mise à jour</a>'+
+          '</div>';
+      } else {
+        host.innerHTML = '<div class="alert-box" style="border-color:var(--ok);background:#eef8f1;color:#1d5c37;">✅ Vous utilisez déjà la dernière version (v'+escapeHtml(APP_VERSION)+').</div>';
+      }
+    })
+    .catch(function(err){
+      host.innerHTML = '<div class="hint">Impossible de vérifier les mises à jour pour le moment (connexion internet requise, ou dépôt GitHub non accessible).</div>';
+    });
+}
+
 function wireSettingsEvents(){
+  $("#btnCheckUpdate").addEventListener("click", checkForUpdates);
+  $("#btnRefreshStorage").addEventListener("click", renderStorageUsage);
+
+  if($("#syncUrlInput")) $("#syncUrlInput").value = loadSyncUrl();
+  $("#btnSaveSyncUrl").addEventListener("click", function(){
+    if(saveSyncUrl($("#syncUrlInput").value.trim())) toast("URL de synchronisation enregistrée ✔");
+  });
+  $("#btnTestSync").addEventListener("click", function(){
+    if(!saveSyncUrl($("#syncUrlInput").value.trim())) return;
+    var host = $("#syncTestResult");
+    host.innerHTML = '<div class="hint">Test en cours…</div>';
+    syncToGoogleSheets(false).then(function(ok){
+      host.innerHTML = ok
+        ? '<div class="alert-box" style="border-color:var(--ok);background:#eef8f1;color:#1d5c37;">✅ Requête envoyée avec succès. Vérifiez votre Google Sheets pour confirmer la réception d\'une ligne de test.</div>'
+        : '<div class="alert-box">⚠️ URL manquante ou requête impossible — vérifiez l\'URL et votre connexion.</div>';
+    });
+  });
+
   $("#btnAddFamilleProduit").addEventListener("click", function(){
     var name = prompt("Nom de la nouvelle famille de produits :");
     if(!name) return;
@@ -2590,6 +4876,18 @@ function wireSettingsEvents(){
     state.catalog.niveaux.push(name.trim());
     saveCatalog();
     renderFlatEditor("#settingsNiveaux","niveaux");
+    refreshDependentSelectsAfterCatalogChange();
+  });
+
+  $("#btnAddSite").addEventListener("click", function(){
+    var name = prompt("Nom du nouveau site (ex : USINE BASSAM) :");
+    if(!name) return;
+    name = name.trim();
+    if(!name) return;
+    if(state.catalog.sites.indexOf(name) !== -1){ toast("Ce site existe déjà."); return; }
+    state.catalog.sites.push(name);
+    saveCatalog();
+    renderFlatEditor("#settingsSites","sites");
     refreshDependentSelectsAfterCatalogChange();
   });
 
@@ -2634,7 +4932,8 @@ function wireSettingsEvents(){
           produits: parsed.produits || base.produits,
           defauts: parsed.defauts || base.defauts,
           niveaux: (parsed.niveaux && parsed.niveaux.length) ? parsed.niveaux : base.niveaux,
-          classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes
+          classes: (parsed.classes && parsed.classes.length) ? parsed.classes : base.classes,
+          sites: (parsed.sites && parsed.sites.length) ? parsed.sites : base.sites
         };
         saveCatalog();
         renderAllSettings();
@@ -2659,32 +4958,77 @@ function wireSettingsEvents(){
 }
 
 /* ===================== ÉVÉNEMENTS ===================== */
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", async function(){
+ try{
   var hl = $("#headerLogo");
   if(hl) hl.src = LOGO_DATA_URI;
 
   state.catalog = loadCatalog();
-  loadShiftFromStorage();
+  // On attend que le quart en cours soit chargé depuis IndexedDB avant de rendre
+  // quoi que ce soit qui en dépend (historique, photos de synthèse) — sinon un
+  // rendu prématuré écraserait les données persistées par un tableau vide.
+  await loadShiftFromStorage();
 
   fillMachineSelect();
   fillProduitSelect();
+  fillSiteSelect();
+  var savedSite = safeLocalStorageGet(USER_SITE_KEY);
+  if(savedSite && $("#f-site")) $("#f-site").value = savedSite;
+  if($("#f-site")) $("#f-site").addEventListener("change", function(){
+    safeLocalStorageSet(USER_SITE_KEY, this.value);
+  });
   resetParamStatus();
   resetForm(false);
   renderParamList();
   renderHistory();
   updateBadges();
   wireSettingsEvents();
+  wirePin();
+  wireNavigation();
+  if($("#curVersionLabel")) $("#curVersionLabel").textContent = "v"+APP_VERSION;
+
+  // Bouton photo unique (délégué : couvre tous les blocs, y compris ceux créés dynamiquement)
+  document.body.addEventListener("click", function(e){
+    var btn = e.target.closest(".photo-single-btn");
+    if(!btn) return;
+    var wrap = btn.parentElement;
+    var cameraInput = wrap.querySelector('input[capture]');
+    var galleryInput = wrap.querySelector('input[type=file]:not([capture])');
+    openPhotoChoiceSheet(cameraInput, galleryInput);
+  });
+  if($("#photoChoiceCamera")) $("#photoChoiceCamera").addEventListener("click", function(){
+    $("#photoChoiceModal").classList.remove("show");
+    if(_pendingPhotoCameraInput) _pendingPhotoCameraInput.click();
+  });
+  if($("#photoChoiceGallery")) $("#photoChoiceGallery").addEventListener("click", function(){
+    $("#photoChoiceModal").classList.remove("show");
+    if(_pendingPhotoGalleryInput) _pendingPhotoGalleryInput.click();
+  });
+  if($("#photoChoiceCancel")) $("#photoChoiceCancel").addEventListener("click", function(){
+    $("#photoChoiceModal").classList.remove("show");
+  });
+  if($("#photoChoiceModal")) $("#photoChoiceModal").addEventListener("click", function(e){
+    if(e.target.id === "photoChoiceModal") $("#photoChoiceModal").classList.remove("show");
+  });
+
+  // Vérification des mises à jour différée et protégée : ne doit jamais bloquer
+  // le reste de l'application si le réseau est indisponible ou fetch() absent.
+  setTimeout(function(){
+    try{ checkForUpdates(); }catch(e){ console.error("checkForUpdates a échoué :", e); }
+  }, 50);
 
   $all(".tab-btn").forEach(function(b){
     b.addEventListener("click", function(){
+      if(b.dataset.view === "synth"){ showRap(_rapCurrent === "awareness" ? "awareness" : _rapCurrent); return; }
       showView(b.dataset.view);
-      if(b.dataset.view === "synth") renderSynthPreview();
-      if(b.dataset.view === "settings") renderAllSettings();
+      if(b.dataset.view === "settings" && pinIsUnlocked()){ renderAllSettings(); renderStorageUsage(); }
     });
   });
 
   $("#f-machine").addEventListener("change", onMachineChange);
   $("#f-emballage").addEventListener("change", onEmballageChange);
+  enhanceSelectWithSearch($("#f-machine"), "Rechercher une ligne / machine…");
+  enhanceSelectWithSearch($("#f-produit"), "Rechercher un produit…");
   $("#terrainPhotoCamera").addEventListener("change", function(){ handleTerrainPhotoInput(this); });
   $("#terrainPhotoGallery").addEventListener("change", function(){ handleTerrainPhotoInput(this); });
   renderTerrainPhotos();
@@ -2714,16 +5058,68 @@ document.addEventListener("DOMContentLoaded", function(){
 
   $("#btnNewShift").addEventListener("click", function(){
     if(confirm("Démarrer un nouveau quart ? Tout l'historique actuel sera effacé (pensez à exporter la synthèse avant).")){
-      state.shiftControls = [];
-      state.synthPhotos = [];
-      renderHistory();
-      renderSynthPhotos();
-      updateBadges();
-      toast("Nouveau quart démarré.");
+      var resetShift = function(){
+        state.shiftControls = [];
+        state.synthPhotos = [];
+        renderHistory();
+        renderSynthPhotos();
+        updateBadges();
+        toast("Nouveau quart démarré. Historique de tendance mis à jour.");
+      };
+      // On archive d'abord le quart (pour l'analyse de tendance multi-quarts), puis on
+      // réinitialise — même si l'archivage échoue, le nouveau quart démarre quand même.
+      archiveCurrentShiftToHistory().then(resetShift, resetShift);
     }
   });
 
   $("#btnBuildSynth").addEventListener("click", renderSynthPreview);
+
+  // Module 1 — Synthèse produits et lots du quart
+  $("#btnBuildExtract1").addEventListener("click", renderExtract1Preview);
+  $("#extract1ActionsTrigger").addEventListener("click", function(){
+    var d = $("#extract-date").value, q = $("#extract-quart").value;
+    openExportSheet({title:"Produits et lots du quart", getNode:function(){ return $("#extract1PreviewHost"); },
+      filename:"MIBEM_ProduitsLots_"+d, caption:"Synthèse produits et lots — MIBEM COMPANY — "+q,
+      excel:{ save:function(){ exportExtractExcel(buildExtract1ExcelWorkbook(d,q), "MIBEM_ProduitsLots_"+d+".xlsx"); },
+              share:function(){ shareExtractExcel(buildExtract1ExcelWorkbook(d,q), "MIBEM_ProduitsLots_"+d+".xlsx", "Synthèse produits et lots — MIBEM COMPANY — "+q); } }});
+  });
+  $("#extract2ActionsTrigger").addEventListener("click", function(){
+    var d = $("#extract2-date").value, q = $("#extract2-quart").value;
+    openExportSheet({title:"Journal des non-conformités", getNode:function(){ return $("#extract2PreviewHost"); },
+      filename:"MIBEM_JournalNC_"+d, caption:"Journal des non-conformités — MIBEM COMPANY — "+q,
+      excel:{ save:function(){ exportExtractExcel(buildExtract2ExcelWorkbook(d,q), "MIBEM_JournalNC_"+d+".xlsx"); },
+              share:function(){ shareExtractExcel(buildExtract2ExcelWorkbook(d,q), "MIBEM_JournalNC_"+d+".xlsx", "Journal des non-conformités — MIBEM COMPANY — "+q); } }});
+  });
+
+  // Module 3 — Tendance multi-quarts
+  $("#btnBuildExtract3").addEventListener("click", renderExtract3Preview);
+  $("#extract3ActionsTrigger").addEventListener("click", function(){
+    var wd = $("#extract3-window").value, cap = "Tendance multi-quarts — MIBEM COMPANY — "+(WINDOW_LABELS[wd]||"");
+    var fn = "MIBEM_Tendance_"+todayISO()+".xlsx";
+    openExportSheet({title:"Tendance multi-quarts", getNode:function(){ return $("#extract3PreviewHost"); },
+      filename:"MIBEM_Tendance_"+todayISO(), caption:cap,
+      excel:{ save:function(){ computeMultiShiftRecurrence(wd).then(function(data){ exportExtractExcel(buildExtract3ExcelWorkbook(data, wd), fn); }); },
+              share:function(){ computeMultiShiftRecurrence(wd).then(function(data){ shareExtractExcel(buildExtract3ExcelWorkbook(data, wd), fn, cap); }); } }});
+  });
+  $("#btnExtract3Reset").addEventListener("click", function(){
+    if(confirm("Réinitialiser tout l'historique de tendance multi-quarts ? Cette action est irréversible (le quart en cours n'est pas affecté).")){
+      saveShiftHistory([]).then(function(){
+        toast("Historique de tendance réinitialisé.");
+        renderExtract3Preview();
+      });
+    }
+  });
+
+  // Sensibilisation opérateurs
+  $("#btnBuildAwareness").addEventListener("click", renderAwarenessPreview);
+  $("#btnAwarenessShareWA").addEventListener("click", function(){
+    if(state.lastAwarenessMessage) shareTextMessage(state.lastAwarenessMessage);
+  });
+  $("#btnAwarenessCopy").addEventListener("click", function(){
+    if(!state.lastAwarenessMessage) return;
+    copyTextToClipboard(state.lastAwarenessMessage).then(function(){ toast("Texte copié ✔"); });
+  });
+  wireActionsMenu("#awarenessActionsTrigger", "#awarenessActionsDropdown");
 
   $("#closeReportModal").addEventListener("click", function(){
     $("#reportModal").classList.remove("show");
@@ -2732,12 +5128,20 @@ document.addEventListener("DOMContentLoaded", function(){
     if(e.target.id === "reportModal") $("#reportModal").classList.remove("show");
   });
 
-  $("#btnExportPNG").addEventListener("click", function(){ exportNode($("#reportDocHost"), "png", "MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO())); });
-  $("#btnExportPDF").addEventListener("click", function(){ exportNode($("#reportDocHost"), "pdf", "MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO())); });
-  $("#btnShareWA").addEventListener("click", function(){ shareNode($("#reportDocHost"), "MIBEM_Controle", "Rapport de contrôle — MIBEM COMPANY — "+(currentReportCtrl?currentReportCtrl.ligne:"")); });
+  $("#reportActionsTrigger").addEventListener("click", function(){
+    openExportSheet({title:"Rapport de contrôle", getNode:function(){ return $("#reportDocHost"); },
+      filename:"MIBEM_Controle_"+(currentReportCtrl?currentReportCtrl.heure.replace(":",""):todayISO()),
+      caption:buildControlCaption(currentReportCtrl), excel:null});
+  });
+  wireExportSheet();
+ }catch(initErr){
+  console.error("Erreur au démarrage de l'application :", initErr);
+  try{ toast("Une erreur est survenue au démarrage — rechargez l'application."); }catch(e2){}
+ }
 });
 
 })();
+
 
 </script>
 </body>
