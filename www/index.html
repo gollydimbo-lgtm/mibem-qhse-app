@@ -3966,9 +3966,19 @@ function cloneForExport(node){
   // Agrandir les photos UNIQUEMENT pour l'export (jamais dans l'app) : une case
   // plus grande au moment de la capture donne directement bien plus de pixels
   // réels dans le PDF/l'image finale, sans aucune manipulation fragile après coup.
-  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery-cell img"), function(img){
-    img.style.height = "300px";
-    img.style.minHeight = "300px";
+  // Galeries de preuves : 2 photos par ligne jusqu'à 6 photos, 3 par ligne au-delà
+  // (jamais 4) — chaque photo reste grande et lisible, et la coupe de page tombe
+  // toujours entre deux lignes. Les photos "grandes" (fiche du quart) sont inchangées.
+  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery:not(.rgallery-large)"), function(g){
+    var cells = g.querySelectorAll(".rgallery-cell");
+    var perRow = cells.length > 6 ? 3 : 2;
+    var h = perRow === 2 ? 250 : 190;
+    g.style.gap = "10px";
+    Array.prototype.forEach.call(cells, function(c){
+      c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
+      var im = c.querySelector("img");
+      if(im){ im.style.height = h + "px"; im.style.minHeight = h + "px"; }
+    });
   });
   return wrapper;
 }
@@ -3981,7 +3991,7 @@ function buildPdfFromNode(node){
   var margin = 20;
   var maxW = pageW - margin*2;
   var maxH = pageH - margin*2;
-  var SCALE = 2;
+  var SCALE = 1.75;
 
   // Capture UNIQUE et continue de tout le rapport (photos incluses, agrandies par
   // cloneForExport). Avant de lancer la capture, on mesure la position verticale de
@@ -4039,9 +4049,12 @@ function buildPdfFromNode(node){
       sliceCanvas.width = canvas.width;
       sliceCanvas.height = sliceH;
       var ctx = sliceCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceH);
       ctx.drawImage(canvas, 0, p.from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
       if(i>0) pdf.addPage();
-      pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceH/ratio);
+      pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.82), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
+      sliceCanvas.width = sliceCanvas.height = 0;
     });
 
     var dataUri = pdf.output("datauristring");
@@ -4058,16 +4071,16 @@ function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
       document.body.removeChild(exportWrapper);
-      var dataUrl = canvas.toDataURL("image/png");
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       if(isNativeApp() && window.Capacitor.Plugins.Media){
         saveImageToNativeGallery(dataUrl, filename)
           .then(function(){ toast("✔ Enregistré dans Galerie photo > "+MIBEM_ALBUM_NAME); })
           .catch(function(err){ console.error(err); toast("Impossible d'enregistrer dans la galerie."); });
       } else {
         var link = document.createElement("a");
-        link.download = filename + ".png";
+        link.download = filename + ".jpg";
         link.href = dataUrl;
         link.click();
         toast("Image exportée ✔");
@@ -4146,13 +4159,13 @@ function shareNode(node, filename, text, kind){
   if(kind === "png"){
     toast("Préparation de l'image...");
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
       document.body.removeChild(exportWrapper);
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
-          shareBlobOrDownload(base64, blob, filename+".png", "image/png", text, "image");
+          shareBlobOrDownload(base64, blob, filename+".jpg", "image/jpeg", text, "image");
         });
-      }, "image/png");
+      }, "image/jpeg", 0.85);
     }).catch(function(err){
       console.error(err);
       if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
