@@ -29,7 +29,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   font-size:15px;
   line-height:1.45;
-  padding-bottom:70px;
+  padding-bottom:84px;
 }
 .app-header{
   background:linear-gradient(135deg,var(--dark) 0%,var(--dark2) 100%);
@@ -555,11 +555,36 @@ main{
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
   background:#fff;border-top:1px solid var(--line);
-  padding:8px 10px;
-  display:none;
-  gap:6px;
+  box-shadow:0 -2px 10px rgba(30,20,10,.08);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  display:flex;
+  gap:2px;
   z-index:40;
 }
+.bottom-nav.hide{display:none;}
+.bottom-nav .tab-btn{
+  flex:1;min-width:0;background:none;border:none;border-radius:10px;
+  color:var(--ink-soft);padding:6px 2px;font-size:.66rem;font-weight:700;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.bottom-nav .tab-btn .ni{font-size:1.25rem;line-height:1;}
+.bottom-nav .tab-btn.active{background:#f3e9d6;color:var(--dark2);}
+.bottom-nav .tab-badge{top:0;right:calc(50% - 22px);}
+.subnav{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.subnav button{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.subnav button.on{background:var(--dark2);border-color:var(--dark2);color:#fff;}
+.home-hello{margin:0 0 12px;}
+.home-hello b{font-size:1.1rem;color:var(--dark2);}
+.home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.home-stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center;}
+.home-stat .n{font-size:1.6rem;font-weight:800;color:var(--dark2);line-height:1.1;}
+.home-stat .l{font-size:.68rem;color:var(--ink-soft);margin-top:2px;}
+.home-stat.bad .n{color:var(--nc);} .home-stat.good .n{color:var(--ok);}
+.home-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.home-actions .btn{margin:0;}
+.home-recent .history-item{cursor:pointer;}
+.toast{bottom:84px;}
 .modal-bg{
   position:fixed;inset:0;background:rgba(15,25,20,.55);
   display:none;align-items:flex-start;justify-content:center;
@@ -686,7 +711,7 @@ main{
 .export-chip.on{border-color:var(--dark2);background:var(--dark2);color:#fff;}
 .export-hint{font-size:.72rem;color:var(--ink-soft);margin:0 0 12px;min-height:1.1em;}
 @media print{
-  .app-header,.bottom-nav,.tabs,.btn-row,.modal-actions{display:none!important;}
+  .app-header,.bottom-nav,.tabs,.subnav,.btn-row,.modal-actions{display:none!important;}
 }
 </style>
 </head>
@@ -700,19 +725,32 @@ main{
     </div>
     <div class="session-pill" id="sessionPill">Quart en cours</div>
   </div>
-  <div class="tabs">
-    <button class="tab-btn active" data-view="form">Nouveau contrôle</button>
-    <button class="tab-btn" data-view="history">Historique <span class="tab-badge" id="histBadge" style="display:none">0</span></button>
-    <button class="tab-btn" data-view="synth">Synthèse fin de quart</button>
-    <button class="tab-btn" data-view="awareness">📢 Sensibilisation</button>
-    <button class="tab-btn" data-view="settings">⚙️ Paramètres</button>
-  </div>
 </header>
 
 <main>
 
+  <!-- ============ VIEW: ACCUEIL ============ -->
+  <section class="view active" id="view-home">
+    <p class="home-hello"><b id="homeTitle">Bonjour</b><br><span class="hint" id="homeSub"></span></p>
+    <div class="home-stats">
+      <div class="home-stat"><div class="n" id="homeN">0</div><div class="l">Contrôles du quart</div></div>
+      <div class="home-stat bad"><div class="n" id="homeNC">0</div><div class="l">Non-conformités</div></div>
+      <div class="home-stat good"><div class="n" id="homeRate">—</div><div class="l">Contrôles conformes</div></div>
+    </div>
+    <div class="home-actions">
+      <button class="btn btn-primary" data-goto="form">➕ Nouveau contrôle</button>
+      <button class="btn btn-dark" data-goto="history">📋 Historique</button>
+      <button class="btn btn-dark" data-goto="synth">📊 Rapports</button>
+      <button class="btn btn-dark" data-goto="awareness">📢 Sensibilisation</button>
+    </div>
+    <div class="card home-recent">
+      <h2>Derniers contrôles</h2>
+      <div id="homeRecent"></div>
+    </div>
+  </section>
+
   <!-- ============ VIEW: FORM ============ -->
-  <section class="view active" id="view-form">
+  <section class="view" id="view-form">
 
     <div class="card">
       <h2>Identification du contrôle</h2>
@@ -826,7 +864,14 @@ main{
 
   <!-- ============ VIEW: SYNTHESIS ============ -->
   <section class="view" id="view-synth">
-    <div class="card synth-photo-card">
+    <div class="subnav" data-subnav>
+      <button data-rap="synth">Synthèse du quart</button>
+      <button data-rap="prod">Produits et lots</button>
+      <button data-rap="nc">Journal NC</button>
+      <button data-rap="trend">Tendance</button>
+      <button data-rap="awareness">Sensibilisation</button>
+    </div>
+    <div class="card synth-photo-card" data-rap="synth">
       <h2>📷 PHOTO DE LA FICHE DE RAPPORT <span style="color:var(--nc);">★</span></h2>
       <p class="hint" style="margin-top:-4px;margin-bottom:12px;">Espace dédié : déposez ici la photo de la fiche de rapport papier remplie en fin de quart (ou toute autre preuve globale du quart). Elle sera affichée en grand format dans la synthèse exportée.</p>
       <div class="photo-single-wrap">
@@ -836,7 +881,7 @@ main{
       </div>
       <div class="photo-grid photo-grid-large" id="synthPhotoList"></div>
     </div>
-    <div class="card">
+    <div class="card" data-rap="synth">
       <h2>Synthèse de fin de quart</h2>
       <p class="hint" style="margin-top:-6px;">Regroupe automatiquement tous les contrôles et points d'alerte enregistrés depuis le début du quart.</p>
       <div class="field" style="margin-top:10px;">
@@ -845,10 +890,10 @@ main{
       </div>
       <button class="btn btn-dark btn-block" id="btnBuildSynth">📋 Générer la synthèse</button>
     </div>
-    <div id="synthPreviewHost"></div>
+    <div id="synthPreviewHost" data-rap="synth"></div>
 
     <!-- ============ MODULE 1 : SYNTHÈSE PRODUITS ET LOTS DU QUART ============ -->
-    <div class="card">
+    <div class="card" data-rap="prod">
       <h2>📦 Synthèse produits et lots du quart</h2>
       <p class="hint" style="margin-top:-6px;">Extrait automatiquement les lignes déjà contrôlées — aucune ressaisie, ces données viennent de tes rapports de contrôle.</p>
       <div class="field" style="margin-top:10px;">
@@ -865,7 +910,7 @@ main{
     </div>
 
     <!-- ============ MODULE 2 : JOURNAL ISOLÉ DES NON-CONFORMITÉS ============ -->
-    <div class="card">
+    <div class="card" data-rap="nc">
       <h2>🚨 Journal isolé des non-conformités</h2>
       <p class="hint" style="margin-top:-6px;">Isole uniquement les anomalies détectées durant le quart sélectionné — aucune ressaisie.</p>
       <div class="field" style="margin-top:10px;">
@@ -882,7 +927,7 @@ main{
     </div>
 
     <!-- ============ MODULE 3 : TENDANCE MULTI-QUARTS (récurrence dans le temps) ============ -->
-    <div class="card">
+    <div class="card" data-rap="trend">
       <h2>📈 Tendance multi-quarts (récurrence dans le temps)</h2>
       <p class="hint" style="margin-top:-6px;">Détecte les défauts qui reviennent sur plusieurs quarts — signe d'une cause systémique (usure d'équipement, dérive process). Se construit automatiquement à chaque « Nouveau quart » démarré ; aucune ressaisie.</p>
       <div class="field" style="margin-top:10px;">
@@ -902,6 +947,13 @@ main{
 
   <!-- ============ VIEW: SENSIBILISATION OPÉRATEURS ============ -->
   <section class="view" id="view-awareness">
+    <div class="subnav" data-subnav>
+      <button data-rap="synth">Synthèse du quart</button>
+      <button data-rap="prod">Produits et lots</button>
+      <button data-rap="nc">Journal NC</button>
+      <button data-rap="trend">Tendance</button>
+      <button data-rap="awareness">Sensibilisation</button>
+    </div>
     <div class="card">
       <h2>📢 Sensibilisation opérateurs</h2>
       <p class="hint" style="margin-top:-6px;">Message généré automatiquement à partir des non-conformités du quart, des alertes et des points récurrents à surveiller — rien à rédiger, prêt à transmettre à l'équipe.</p>
@@ -919,9 +971,13 @@ main{
 
   <!-- ============ VIEW: SETTINGS / PARAMÈTRES ============ -->
   <section class="view" id="view-settings">
+    <div class="subnav" id="setNav">
+      <button data-setgrp="lists" class="on">Listes du formulaire</button>
+      <button data-setgrp="system">Sécurité et données</button>
+    </div>
     <div class="alert-box">⚙️ Personnalisez ici les listes utilisées dans les formulaires (produits, défauts, niveaux, classes, lignes). Les modifications sont enregistrées automatiquement sur cet appareil.</div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>🔐 Sécurité</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;" id="pinStatus"></p>
       <div class="btn-row">
@@ -930,21 +986,21 @@ main{
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>🔄 Mises à jour</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Version installée : <b id="curVersionLabel">v__APP_VERSION__</b></p>
       <div id="updateCheckResult"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnCheckUpdate">🔍 Vérifier maintenant</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>💾 Espace de stockage utilisé</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Les photos sont conservées en haute qualité sur cet appareil (quart en cours + historique de tendance). Surveille cet indicateur si tu accumules beaucoup de contrôles sans exporter.</p>
       <div id="storageUsageResult"><p class="hint">Calcul en cours…</p></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnRefreshStorage">🔄 Actualiser</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>📊 Synchronisation tableau de bord (Google Sheets)</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Envoie automatiquement la synthèse de fin de quart (et le détail des non-conformités) vers un Google Sheets — voir le guide fourni pour la mise en place (5 minutes, gratuit).</p>
       <div class="field">
@@ -958,7 +1014,7 @@ main{
       <div id="syncTestResult"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>🔊 Alertes sonores</h2>
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);text-transform:none;">
@@ -968,44 +1024,44 @@ main{
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🍾 Produits fabriqués</h2>
       <div id="settingsProduits"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddFamilleProduit">+ Nouvelle famille de produits</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🚨 Défauts / non-conformités</h2>
       <div id="settingsDefauts"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddCategorieDefaut">+ Nouvelle catégorie de défauts</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>📶 Niveaux de non-conformité</h2>
       <div id="settingsNiveaux"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddNiveau">+ Ajouter un niveau</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🏷️ Classes du défaut</h2>
       <div id="settingsClasses"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddClasse">+ Ajouter une classe</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🏢 Sites</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Renseignez ici les sites de l'entreprise (ex : USINE BASSAM, USINE KOUMASSI). Chaque utilisateur choisit son site dans le formulaire de contrôle.</p>
       <div id="settingsSites"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddSite">+ Ajouter un site</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="lists">
       <h2>🏭 Lignes / machines</h2>
       <div id="settingsMachines"></div>
       <div class="btn-row"><button class="btn btn-ghost" id="btnAddMachine">+ Ajouter une ligne / machine</button></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-set="system">
       <h2>💾 Sauvegarde du catalogue</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Exportez régulièrement votre catalogue personnalisé pour le réutiliser sur un autre appareil, ou pour le restaurer après réinitialisation.</p>
       <div class="btn-row">
@@ -1020,6 +1076,14 @@ main{
   </section>
 
 </main>
+
+<nav class="bottom-nav" id="mainNav" aria-label="Navigation principale">
+  <button class="tab-btn active" data-view="home"><span class="ni">🏠</span>Accueil</button>
+  <button class="tab-btn" data-view="form"><span class="ni">➕</span>Contrôle</button>
+  <button class="tab-btn" data-view="history"><span class="ni">📋</span>Historique <span class="tab-badge" id="histBadge" style="display:none">0</span></button>
+  <button class="tab-btn" data-view="synth" data-also="awareness"><span class="ni">📊</span>Rapports</button>
+  <button class="tab-btn" data-view="settings"><span class="ni">⚙️</span>Paramètres</button>
+</nav>
 
 <!-- ============ MODAL: single report preview ============ -->
 <div class="modal-bg" id="reportModal">
@@ -2658,6 +2722,7 @@ function updateBadges(){
   var ncTotal = 0;
   state.shiftControls.forEach(function(c){ ncTotal += Object.keys(c.nc).length; });
   $("#sessionPill").textContent = n + " contrôle(s) · " + ncTotal + " NC";
+  if(typeof renderHome === "function") renderHome();
 }
 
 /* ===================== NAVIGATION ===================== */
@@ -2938,6 +3003,66 @@ function wirePin(){
   renderPinStatus();
 }
 
+/* ===================== ACCUEIL + RAPPORTS (organisation) ===================== */
+function renderHome(){
+  if(!$("#homeN")) return;
+  var list = state.shiftControls, n = list.length, ncTotal = 0, okCount = 0;
+  list.forEach(function(c){ var k = Object.keys(c.nc||{}).length; ncTotal += k; if(k === 0) okCount++; });
+  $("#homeN").textContent = n;
+  $("#homeNC").textContent = ncTotal;
+  $("#homeRate").textContent = n ? Math.round(okCount*100/n) + " %" : "—";
+  var h = new Date().getHours();
+  $("#homeTitle").textContent = (h < 18 ? "Bonjour" : "Bonsoir");
+  $("#homeSub").textContent = "MIBEM COMPANY — " + (n ? "quart en cours" : "aucun contrôle enregistré pour ce quart");
+  var host = $("#homeRecent");
+  if(!n){ host.innerHTML = '<div class="empty-state">Aucun contrôle pour l\'instant.<br>Touchez « Nouveau contrôle » pour commencer.</div>'; return; }
+  host.innerHTML = list.slice(-3).reverse().map(function(c){
+    var k = Object.keys(c.nc||{}).length;
+    return '<div class="history-item" data-goto="history"><div class="status-bar '+(k?'nc':'ok')+'"></div><div class="hi-main">'+
+      '<div class="hi-title">'+escapeHtml(c.heure)+' — '+escapeHtml(c.ligne)+'</div>'+
+      '<div class="hi-sub">'+escapeHtml(c.produit)+' · Lot '+escapeHtml(c.lot||"—")+'</div>'+
+      '<div class="hi-sub">'+(k ? ("🚨 "+k+" NC") : "✅ Aucune NC")+'</div></div></div>';
+  }).join("");
+}
+var _rapCurrent = "synth";
+function showRap(key){
+  _rapCurrent = key;
+  if(key === "awareness"){
+    if(showView("awareness")) renderAwarenessPreview();
+  } else {
+    showView("synth");
+    $all("#view-synth [data-rap]:not(button)").forEach(function(el){ el.style.display = (el.getAttribute("data-rap") === key) ? "" : "none"; });
+    if(key === "synth") renderSynthPreview();
+    else { populateExtractFilters("#extract-date", "#extract-quart"); populateExtractFilters("#extract2-date", "#extract2-quart"); }
+  }
+  $all("[data-subnav] button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-rap") === key); });
+  window.scrollTo(0,0);
+}
+function showSetGroup(g){
+  $all("#view-settings [data-set]").forEach(function(c){ c.style.display = (c.getAttribute("data-set") === g) ? "" : "none"; });
+  $all("#setNav button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-setgrp") === g); });
+}
+function wireNavigation(){
+  $all("#setNav button").forEach(function(b){ b.addEventListener("click", function(){ showSetGroup(b.getAttribute("data-setgrp")); window.scrollTo(0,0); }); });
+  showSetGroup("lists");
+  $all("[data-subnav] button").forEach(function(b){
+    b.addEventListener("click", function(){ showRap(b.getAttribute("data-rap")); });
+  });
+  document.addEventListener("click", function(e){
+    var g = e.target.closest("[data-goto]"); if(!g) return;
+    var k = g.getAttribute("data-goto");
+    if(k === "awareness") showRap("awareness");
+    else if(k === "synth") showRap("synth");
+    else { var t = $('.tab-btn[data-view="'+k+'"]'); if(t) t.click(); }
+  });
+  // Clavier ouvert : on masque la barre du bas pour ne pas gêner la saisie
+  var nav = $("#mainNav");
+  document.addEventListener("focusin", function(e){ if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) nav.classList.add("hide"); });
+  document.addEventListener("focusout", function(){ setTimeout(function(){
+    var a = document.activeElement; if(!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) nav.classList.remove("hide"); }, 150); });
+  showRap("synth"); showView("home");
+}
+
 function showView(name){
   if(name === "settings" && !pinIsUnlocked()){
     requestSettingsAccess(function(){ showView("settings"); renderAllSettings(); renderStorageUsage(); });
@@ -2950,7 +3075,8 @@ function showView(name){
   $all(".view").forEach(function(v){ v.classList.remove("active"); });
   $all(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
   $("#view-"+name).classList.add("active");
-  $all(".tab-btn").forEach(function(b){ if(b.dataset.view===name) b.classList.add("active"); });
+  $all(".tab-btn").forEach(function(b){ if(b.dataset.view===name || (b.dataset.also||"").split(" ").indexOf(name) > -1) b.classList.add("active"); });
+  if(name === "home") renderHome();
   window.scrollTo(0,0);
   return true;
 }
@@ -4858,6 +4984,7 @@ document.addEventListener("DOMContentLoaded", async function(){
   updateBadges();
   wireSettingsEvents();
   wirePin();
+  wireNavigation();
   if($("#curVersionLabel")) $("#curVersionLabel").textContent = "v"+APP_VERSION;
 
   // Bouton photo unique (délégué : couvre tous les blocs, y compris ceux créés dynamiquement)
@@ -4892,14 +5019,9 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   $all(".tab-btn").forEach(function(b){
     b.addEventListener("click", function(){
+      if(b.dataset.view === "synth"){ showRap(_rapCurrent === "awareness" ? "awareness" : _rapCurrent); return; }
       showView(b.dataset.view);
-      if(b.dataset.view === "synth"){
-        renderSynthPreview();
-        populateExtractFilters("#extract-date", "#extract-quart");
-        populateExtractFilters("#extract2-date", "#extract2-quart");
-      }
       if(b.dataset.view === "settings" && pinIsUnlocked()){ renderAllSettings(); renderStorageUsage(); }
-      if(b.dataset.view === "awareness") renderAwarenessPreview();
     });
   });
 
