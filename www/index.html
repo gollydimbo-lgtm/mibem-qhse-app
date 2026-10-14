@@ -662,6 +662,25 @@ main{
 .settings-add-row button{
   flex-shrink:0;padding:7px 12px;border-radius:7px;border:none;background:var(--gold);color:#1c1200;font-weight:700;cursor:pointer;font-size:.78rem;
 }
+/* ===================== CODE PIN (accès aux Paramètres) ===================== */
+.pin-box{max-width:380px;margin-top:60px;text-align:center;}
+.pin-box h3{margin:4px 0 6px;color:var(--dark2);font-size:1.05rem;}
+.pin-box p{font-size:.82rem;color:var(--ink-soft);margin:0 0 12px;line-height:1.45;}
+.pin-input{
+  width:100%;padding:12px 10px;font-size:1.5rem;text-align:center;letter-spacing:.5em;
+  border:1.5px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;
+}
+.pin-input:focus{outline:none;border-color:var(--gold-dark);}
+.pin-msg{min-height:1.2em;font-size:.78rem;color:var(--nc);margin:2px 0 8px;font-weight:600;}
+.pin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.pin-actions .btn{flex:1;min-width:110px;}
+.pin-link{background:none;border:none;color:var(--dark2);text-decoration:underline;font-size:.78rem;cursor:pointer;margin-top:10px;}
+.pin-code-box{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.5rem;font-weight:800;letter-spacing:.12em;
+  background:#fff;border:2px dashed var(--gold-dark);border-radius:10px;padding:14px 8px;margin:8px 0 12px;user-select:all;
+}
+.pin-check{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:.8rem;margin:6px 0 10px;}
+.pin-check input{margin-top:3px;width:18px;height:18px;}
 @media print{
   .app-header,.bottom-nav,.tabs,.btn-row,.modal-actions{display:none!important;}
 }
@@ -921,6 +940,15 @@ main{
     <div class="alert-box">⚙️ Personnalisez ici les listes utilisées dans les formulaires (produits, défauts, niveaux, classes, lignes). Les modifications sont enregistrées automatiquement sur cet appareil.</div>
 
     <div class="card">
+      <h2>🔐 Sécurité</h2>
+      <p class="hint" style="margin-top:-6px;margin-bottom:10px;" id="pinStatus"></p>
+      <div class="btn-row">
+        <button class="btn btn-dark" id="btnPinChange">🔑 Changer le code PIN</button>
+        <button class="btn btn-ghost" id="btnPinLock">🔒 Verrouiller maintenant</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>🔄 Mises à jour</h2>
       <p class="hint" style="margin-top:-6px;margin-bottom:10px;">Version installée : <b id="curVersionLabel">v__APP_VERSION__</b></p>
       <div id="updateCheckResult"></div>
@@ -1039,6 +1067,10 @@ main{
       <button type="button" class="btn btn-ghost btn-block" id="photoChoiceCancel">Annuler</button>
     </div>
   </div>
+</div>
+
+<div class="modal-bg" id="pinModal">
+  <div class="modal-box pin-box"><div id="pinModalBody"></div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2644,12 +2676,298 @@ function updateBadges(){
 }
 
 /* ===================== NAVIGATION ===================== */
+/* ===================== CODE PIN — accès aux Paramètres =====================
+   Le PIN protège l'écran Paramètres (sites, produits, défauts, synchronisation…) contre
+   les modifications accidentelles ou non autorisées par un autre opérateur.
+   Stockage : seul un condensé SHA-256 salé du PIN est conservé (jamais le PIN lui-même),
+   ainsi que celui d'un code de secours affiché une seule fois à la création.
+   Après 5 échecs, l'accès est bloqué temporairement (durée croissante). */
+var PIN_KEY = "mibem_qhse_pin_v1";
+var PIN_SESSION_MS = 5*60*1000;   // déverrouillage pendant l'utilisation des Paramètres
+var PIN_GRACE_MS = 60*1000;       // délai de grâce après avoir quitté les Paramètres
+var _pinUnlockedUntil = 0;
+var _pinMode = "enter";
+var _pinAfterGrant = null;
+var _pinPending = null;           // enregistrement en cours de création (avant confirmation)
+var _pinRecovering = false;
+
+function sha256Js(bytes){
+  var K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var l = bytes.length, bitLen = l*8;
+  var padLen = ((l + 9 + 63) >> 6) << 6;
+  var buf = new Uint8Array(padLen);
+  buf.set(bytes); buf[l] = 0x80;
+  var dv = new DataView(buf.buffer);
+  dv.setUint32(padLen-8, Math.floor(bitLen/0x100000000), false);
+  dv.setUint32(padLen-4, bitLen>>>0, false);
+  var w = new Uint32Array(64);
+  function rotr(x,n){ return (x>>>n) | (x<<(32-n)); }
+  for(var off=0; off<padLen; off+=64){
+    for(var i=0;i<16;i++) w[i] = dv.getUint32(off+i*4, false);
+    for(i=16;i<64;i++){
+      var s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15]>>>3);
+      var s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2]>>>10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(i=0;i<64;i++){
+      var S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+      var ch = (e & f) ^ (~e & g);
+      var t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      var S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+      var mj = (a & b) ^ (a & c) ^ (b & c);
+      var t2 = (S0 + mj) | 0;
+      h=g; g=f; f=e; e=(d + t1) | 0; d=c; c=b; b=a; a=(t1 + t2) | 0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  return H.map(function(x){ return ("00000000" + (x>>>0).toString(16)).slice(-8); }).join("");
+}
+function sha256Hex(text){
+  var data = new TextEncoder().encode(text);
+  if(window.crypto && window.crypto.subtle && window.crypto.subtle.digest){
+    return window.crypto.subtle.digest("SHA-256", data).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    }).catch(function(){ return sha256Js(data); });
+  }
+  return Promise.resolve(sha256Js(data));
+}
+function randomBytes(n){
+  var a = new Uint8Array(n);
+  (window.crypto || window.msCrypto).getRandomValues(a);
+  return a;
+}
+function randomHex(n){
+  return Array.prototype.map.call(randomBytes(n), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+}
+function newRecoveryCode(){
+  var alpha = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", a = randomBytes(10), s = "";
+  for(var i=0;i<10;i++) s += alpha.charAt(a[i] % alpha.length);
+  return s.slice(0,5) + "-" + s.slice(5);
+}
+function normRecovery(code){ return String(code||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase(); }
+function hashPin(pin, salt){ return sha256Hex(salt + ":pin:" + pin); }
+function hashRecovery(code, salt){ return sha256Hex(salt + ":rec:" + normRecovery(code)); }
+function pinIsWeak(pin){
+  return /^(\d)\1+$/.test(pin) || "0123456789".indexOf(pin) !== -1 || "9876543210".indexOf(pin) !== -1;
+}
+function loadPinRecord(){
+  var raw = safeLocalStorageGet(PIN_KEY);
+  if(!raw) return null;
+  try{ var r = JSON.parse(raw); return (r && r.hash && r.salt && r.rec) ? r : null; }catch(e){ return null; }
+}
+function savePinRecord(r){ safeLocalStorageSet(PIN_KEY, JSON.stringify(r)); }
+function pinIsUnlocked(){ return Date.now() < _pinUnlockedUntil; }
+function pinTouch(){ if(pinIsUnlocked()) _pinUnlockedUntil = Date.now() + PIN_SESSION_MS; }
+
+function verifyPin(pin){
+  var rec = loadPinRecord();
+  if(!rec) return Promise.resolve({ok:false, msg:"Aucun code PIN défini."});
+  var now = Date.now();
+  if(rec.lockUntil && rec.lockUntil > now){
+    return Promise.resolve({ok:false, msg:"Trop d'essais. Réessayez dans "+Math.ceil((rec.lockUntil-now)/1000)+" s."});
+  }
+  return hashPin(pin, rec.salt).then(function(h){
+    if(h === rec.hash){ rec.fails = 0; rec.lockUntil = 0; savePinRecord(rec); return {ok:true}; }
+    rec.fails = (rec.fails||0) + 1;
+    var msg = "PIN incorrect.";
+    if(rec.fails % 5 === 0){
+      var wait = Math.min(900, 30 * Math.pow(2, Math.floor(rec.fails/5) - 1));
+      rec.lockUntil = Date.now() + wait*1000;
+      msg = "PIN incorrect. Accès bloqué pendant "+wait+" s.";
+    } else {
+      msg += " Encore "+(5 - (rec.fails % 5))+" essai(s) avant blocage.";
+    }
+    savePinRecord(rec);
+    return {ok:false, msg:msg};
+  });
+}
+
+function pinGrant(){
+  _pinUnlockedUntil = Date.now() + PIN_SESSION_MS;
+  closePinModal();
+  var cb = _pinAfterGrant; _pinAfterGrant = null;
+  renderPinStatus();
+  if(cb) cb();
+}
+function closePinModal(){
+  var m = $("#pinModal");
+  if(m) m.classList.remove("show");
+  _pinPending = null; _pinRecovering = false;
+}
+function lockSettings(){
+  _pinUnlockedUntil = 0;
+  var v = $("#view-settings");
+  if(v && v.classList.contains("active")) showView("form");
+}
+function requestSettingsAccess(afterGrant){
+  if(pinIsUnlocked()){ pinTouch(); if(afterGrant) afterGrant(); return; }
+  _pinAfterGrant = afterGrant || null;
+  openPinModal(loadPinRecord() ? "enter" : "create");
+}
+function openPinModal(mode){
+  _pinMode = mode;
+  renderPinModal();
+  $("#pinModal").classList.add("show");
+  setTimeout(function(){ var i = $("#pinModal input:not([type=checkbox])"); if(i) i.focus(); }, 80);
+}
+function pinMsg(text){ var m = $("#pinMsg"); if(m) m.textContent = text || ""; }
+function renderPinModal(){
+  var body = $("#pinModalBody");
+  var digits = 'type="password" inputmode="numeric" autocomplete="off" maxlength="6" class="pin-input"';
+  var html = "";
+  if(_pinMode === "enter"){
+    html = '<h3>🔐 Accès aux Paramètres</h3><p>Saisissez votre code PIN pour modifier les paramètres.</p>'+
+      '<input '+digits+' id="pinInput" placeholder="••••">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="cancel">Annuler</button><button class="btn btn-primary" data-pin="enter">Valider</button></div>'+
+      '<button class="pin-link" data-pin="forgot">PIN oublié ?</button>';
+  } else if(_pinMode === "create" || _pinMode === "change"){
+    var isChange = _pinMode === "change";
+    html = '<h3>'+(isChange ? '🔑 Changer le code PIN' : (_pinRecovering ? '🔑 Nouveau code PIN' : '🔐 Créer un code PIN'))+'</h3>'+
+      '<p>Ce code protège les Paramètres (sites, produits, défauts…). Choisissez 4 à 6 chiffres.</p>'+
+      (isChange ? '<input '+digits+' id="pinCur" placeholder="PIN actuel">' : '')+
+      '<input '+digits+' id="pinNew" placeholder="Nouveau PIN">'+
+      '<input '+digits+' id="pinNew2" placeholder="Confirmer le PIN">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="cancel">Annuler</button><button class="btn btn-primary" data-pin="create">Continuer</button></div>';
+  } else if(_pinMode === "recoveryShow"){
+    html = '<h3>📝 Code de secours</h3>'+
+      '<p>Notez ce code sur papier et gardez-le en lieu sûr. Il permet de recréer un PIN si vous l\'oubliez. <b>Il ne sera plus affiché.</b></p>'+
+      '<div class="pin-code-box" id="pinRecCode"></div>'+
+      '<label class="pin-check"><input type="checkbox" id="pinRecOk"><span>J\'ai noté ce code de secours.</span></label>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="copyrec">📋 Copier</button><button class="btn btn-primary" id="pinRecDone" data-pin="recdone" disabled>Terminer</button></div>';
+  } else if(_pinMode === "recover"){
+    html = '<h3>🆘 PIN oublié</h3><p>Saisissez le code de secours noté à la création du PIN.</p>'+
+      '<input type="text" autocomplete="off" maxlength="12" class="pin-input" style="letter-spacing:.2em;font-size:1.2rem;" id="pinRecInput" placeholder="XXXXX-XXXXX">'+
+      '<div class="pin-msg" id="pinMsg"></div>'+
+      '<div class="pin-actions"><button class="btn btn-ghost" data-pin="back">Retour</button><button class="btn btn-primary" data-pin="recover">Valider</button></div>';
+  }
+  body.innerHTML = html;
+  if(_pinMode === "recoveryShow" && _pinPending){ $("#pinRecCode").textContent = _pinPending.code; }
+}
+
+function handlePinAction(act){
+  var rec = loadPinRecord();
+  if(act === "cancel"){ closePinModal(); _pinAfterGrant = null; return; }
+  if(act === "forgot"){ openPinModal("recover"); return; }
+  if(act === "back"){ openPinModal("enter"); return; }
+  if(act === "copyrec"){
+    if(_pinPending) copyTextToClipboard(_pinPending.code).then(function(){ toast("Code de secours copié ✔"); });
+    return;
+  }
+  if(act === "enter"){
+    var v = ($("#pinInput").value || "").trim();
+    verifyPin(v).then(function(res){
+      if(res.ok) pinGrant();
+      else { pinMsg(res.msg); var i = $("#pinInput"); if(i){ i.value = ""; i.focus(); } }
+    });
+    return;
+  }
+  if(act === "recover"){
+    if(!rec){ openPinModal("create"); return; }
+    hashRecovery($("#pinRecInput").value, rec.salt).then(function(h){
+      if(h === rec.rec){ _pinRecovering = true; openPinModal("create"); }
+      else pinMsg("Code de secours incorrect.");
+    });
+    return;
+  }
+  if(act === "create"){
+    var isChange = _pinMode === "change";
+    var n1 = ($("#pinNew").value || "").trim(), n2 = ($("#pinNew2").value || "").trim();
+    var proceed = function(){
+      if(!/^\d{4,6}$/.test(n1)){ pinMsg("Le PIN doit contenir 4 à 6 chiffres."); return; }
+      if(pinIsWeak(n1)){ pinMsg("PIN trop simple (ex. 0000, 1234). Choisissez-en un autre."); return; }
+      if(n1 !== n2){ pinMsg("Les deux saisies ne correspondent pas."); return; }
+      var salt = randomHex(16), code = newRecoveryCode();
+      Promise.all([hashPin(n1, salt), hashRecovery(code, salt)]).then(function(r){
+        _pinPending = {record:{salt:salt, hash:r[0], rec:r[1], fails:0, lockUntil:0}, code:code};
+        openPinModal("recoveryShow");
+      });
+    };
+    if(isChange){
+      verifyPin(($("#pinCur").value || "").trim()).then(function(res){
+        if(res.ok) proceed(); else pinMsg(res.msg);
+      });
+    } else proceed();
+    return;
+  }
+  if(act === "recdone"){
+    if(!_pinPending) return;
+    savePinRecord(_pinPending.record);
+    var wasChange = !!rec && !_pinRecovering && !_pinAfterGrant;
+    _pinPending = null;
+    toast(wasChange ? "Code PIN modifié ✔" : "Code PIN enregistré ✔");
+    pinGrant();
+    return;
+  }
+}
+
+function renderPinStatus(){
+  var el = $("#pinStatus");
+  if(!el) return;
+  el.textContent = loadPinRecord()
+    ? "✅ Un code PIN protège l'accès à cette section. Elle se reverrouille quand vous la quittez."
+    : "⚠️ Aucun code PIN défini : créez-en un pour protéger les paramètres.";
+}
+
+function wirePin(){
+  var modal = $("#pinModal");
+  modal.addEventListener("click", function(e){
+    var b = e.target.closest("[data-pin]");
+    if(b){ handlePinAction(b.dataset.pin); return; }
+    if(e.target === modal){ closePinModal(); _pinAfterGrant = null; }
+  });
+  modal.addEventListener("change", function(e){
+    if(e.target.id === "pinRecOk"){ $("#pinRecDone").disabled = !e.target.checked; }
+  });
+  modal.addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    var primary = modal.querySelector(".btn-primary:not([disabled])");
+    if(primary){ e.preventDefault(); handlePinAction(primary.dataset.pin); }
+  });
+  $("#btnPinChange").addEventListener("click", function(){
+    if(!loadPinRecord()){ _pinAfterGrant = null; openPinModal("create"); }
+    else openPinModal("change");
+  });
+  $("#btnPinLock").addEventListener("click", function(){
+    lockSettings();
+    toast("Paramètres verrouillés 🔒");
+  });
+  // Toute interaction dans les Paramètres prolonge la session déverrouillée.
+  var sv = $("#view-settings");
+  ["click","input","keydown","touchstart"].forEach(function(ev){ sv.addEventListener(ev, pinTouch, true); });
+  // Verrouillage dès que l'application passe en arrière-plan.
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+      _pinUnlockedUntil = 0;
+      if(sv.classList.contains("active")) showView("form");
+    }
+  });
+  // Verrouillage automatique après inactivité.
+  setInterval(function(){
+    if(sv.classList.contains("active") && !pinIsUnlocked()) showView("form");
+  }, 15000);
+  renderPinStatus();
+}
+
 function showView(name){
+  if(name === "settings" && !pinIsUnlocked()){
+    requestSettingsAccess(function(){ showView("settings"); renderAllSettings(); renderStorageUsage(); });
+    return false;
+  }
+  if(name !== "settings" && pinIsUnlocked()){
+    var sv0 = $("#view-settings");
+    if(sv0 && sv0.classList.contains("active")) _pinUnlockedUntil = Date.now() + PIN_GRACE_MS;
+  }
   $all(".view").forEach(function(v){ v.classList.remove("active"); });
   $all(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
   $("#view-"+name).classList.add("active");
   $all(".tab-btn").forEach(function(b){ if(b.dataset.view===name) b.classList.add("active"); });
   window.scrollTo(0,0);
+  return true;
 }
 
 /* ===================== RAPPORT UNITAIRE ===================== */
@@ -4507,6 +4825,7 @@ document.addEventListener("DOMContentLoaded", async function(){
   renderHistory();
   updateBadges();
   wireSettingsEvents();
+  wirePin();
   if($("#curVersionLabel")) $("#curVersionLabel").textContent = "v"+APP_VERSION;
 
   // Bouton photo unique (délégué : couvre tous les blocs, y compris ceux créés dynamiquement)
@@ -4547,7 +4866,7 @@ document.addEventListener("DOMContentLoaded", async function(){
         populateExtractFilters("#extract-date", "#extract-quart");
         populateExtractFilters("#extract2-date", "#extract2-quart");
       }
-      if(b.dataset.view === "settings"){ renderAllSettings(); renderStorageUsage(); }
+      if(b.dataset.view === "settings" && pinIsUnlocked()){ renderAllSettings(); renderStorageUsage(); }
       if(b.dataset.view === "awareness") renderAwarenessPreview();
     });
   });

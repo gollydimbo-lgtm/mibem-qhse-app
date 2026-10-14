@@ -24,6 +24,15 @@ function createWindow() {
   });
   mainWindow = win;
 
+  // Outils développeur désactivés (contournement du PIN / altération des données)
+  win.webContents.on('devtools-opened', () => win.webContents.closeDevTools());
+  win.webContents.on('before-input-event', (event, input) => {
+    const k = (input.key || '').toLowerCase();
+    if (input.type === 'keyDown' && (k === 'f12' || ((input.control || input.meta) && input.shift && (k === 'i' || k === 'j' || k === 'c')))) {
+      event.preventDefault();
+    }
+  });
+
   win.loadFile(path.join(__dirname, 'app', 'index.html'));
 
   // Menu minimal (Fichier / Affichage / Aide)
@@ -43,8 +52,7 @@ function createWindow() {
         { role: 'zoomOut', label: 'Zoom -' },
         { role: 'resetZoom', label: 'Zoom 100%' },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Plein écran' },
-        { role: 'toggleDevTools', label: 'Outils développeur' }
+        { role: 'togglefullscreen', label: 'Plein écran' }
       ]
     },
     {
