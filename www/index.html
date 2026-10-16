@@ -2508,7 +2508,7 @@ function handlePhotoFilesInput(input, arr, onDone){
     // insuffisante pour le WebView) — la vignette légère élimine ce risque.
     return Promise.all([
       resizeImageDataUrl(file, 2200, 0.95),
-      resizeImageDataUrl(file, 700, 0.78)
+      resizeImageDataUrl(file, 1100, 0.86)
     ]).catch(function(){
       // Repli : si le redimensionnement échoue pour une raison quelconque,
       // on garde la photo d'origine plutôt que de la perdre (thumb = même image).
@@ -4075,7 +4075,36 @@ function cloneForExport(node){
       if(im){ im.style.height = h + "px"; im.style.minHeight = h + "px"; }
     });
   });
+  wrapper._ready = fitExportImages(wrapper);
   return wrapper;
+}
+
+/* Les photos sont dimensionnées en pixels EXACTS, avec leur vrai rapport largeur/hauteur,
+   centrées dans leur case : plus aucune déformation à l'export (la capture ne gère pas
+   toujours "object-fit"), et la photo est entière, sans recadrage. */
+function fitExportImages(wrapper){
+  var imgs = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img"));
+  return Promise.all(imgs.map(function(img){
+    var ready = (img.decode ? img.decode().catch(function(){}) : Promise.resolve());
+    return ready.then(function(){
+      var nw = img.naturalWidth, nh = img.naturalHeight;
+      if(!nw || !nh) return;
+      var cell = img.parentNode;
+      var boxW = cell.clientWidth - 2;
+      var boxH = parseFloat(img.style.height) || 250;
+      var k = Math.min(boxW/nw, boxH/nh);
+      var w = Math.floor(nw*k), h = Math.floor(nh*k);
+      img.style.objectFit = "fill";
+      img.style.width = w + "px";
+      img.style.height = h + "px";
+      img.style.minHeight = "0";
+      img.style.margin = "0 auto";
+      img.style.display = "block";
+      cell.style.paddingTop = Math.floor((boxH - h)/2) + "px";
+      cell.style.paddingBottom = Math.ceil((boxH - h)/2) + "px";
+      cell.style.background = "#f4f2ec";
+    });
+  }));
 }
 
 function buildPdfFromNode(node){
@@ -4086,7 +4115,7 @@ function buildPdfFromNode(node){
   var margin = 20;
   var maxW = pageW - margin*2;
   var maxH = pageH - margin*2;
-  var SCALE = 1.75;
+  var SCALE = 2;
 
   // Capture UNIQUE et continue de tout le rapport (photos incluses, agrandies par
   // cloneForExport). Avant de lancer la capture, on mesure la position verticale de
@@ -4094,6 +4123,11 @@ function buildPdfFromNode(node){
   // photos...) — ce sont les SEULES frontières où un saut de page est autorisé.
   // Sans ça, une page pouvait couper une photo ou un tableau pile au milieu.
   var wrapper = cloneForExport(node);
+  return wrapper._ready.then(function(){ return buildPdfCore(wrapper, pdf, margin, maxW, SCALE); });
+}
+function buildPdfCore(wrapper, pdf, margin, maxW, SCALE){
+  var pageH = pdf.internal.pageSize.getHeight();
+  var maxH = pageH - margin*2;
   var reportClone = wrapper.firstChild;
   var wrapperTop = wrapper.getBoundingClientRect().top;
   var blockBoundaries = [];
@@ -4148,7 +4182,7 @@ function buildPdfFromNode(node){
       ctx.fillRect(0, 0, sliceCanvas.width, sliceH);
       ctx.drawImage(canvas, 0, p.from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
       if(i>0) pdf.addPage();
-      pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.82), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
+      pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.88), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
       sliceCanvas.width = sliceCanvas.height = 0;
     });
 
@@ -4166,7 +4200,7 @@ function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    exportWrapper._ready.then(function(){ return html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}); }).then(function(canvas){
       document.body.removeChild(exportWrapper);
       var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       if(isNativeApp() && window.Capacitor.Plugins.Media){
@@ -4254,7 +4288,7 @@ function shareNode(node, filename, text, kind){
   if(kind === "png"){
     toast("Préparation de l'image...");
     var exportWrapper = cloneForExport(node);
-    html2canvas(exportWrapper, {scale:1.75, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+    exportWrapper._ready.then(function(){ return html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}); }).then(function(canvas){
       document.body.removeChild(exportWrapper);
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
