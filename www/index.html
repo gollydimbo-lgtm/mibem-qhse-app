@@ -2517,7 +2517,16 @@ function resizeImageDataUrl(file, maxDim, quality){
         var ctx = canvas.getContext("2d");
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, outW, outH);
+        // Réduction par paliers (÷2 max à chaque fois) : évite le crénelage d'une réduction brutale.
+        var src = img, sw = w, sh = h;
+        while(sw / 2 > outW){
+          var tmp = document.createElement("canvas");
+          tmp.width = Math.round(sw / 2); tmp.height = Math.round(sh / 2);
+          var tctx = tmp.getContext("2d"); tctx.imageSmoothingEnabled = true; tctx.imageSmoothingQuality = "high";
+          tctx.drawImage(src, 0, 0, tmp.width, tmp.height);
+          src = tmp; sw = tmp.width; sh = tmp.height;
+        }
+        ctx.drawImage(src, 0, 0, outW, outH);
         try{
           resolve(canvas.toDataURL("image/jpeg", quality));
         }catch(err){
@@ -3123,6 +3132,7 @@ function showView(name){
    ligne (150px min.), object-fit:contain — la photo entière reste toujours visible,
    jamais recadrée ni déformée — jamais coincées dans une cellule de tableau.
    S'intègre en bas du rapport avec le reste du bloc de validation (contrôleur + alertes). */
+var FULL_BY_THUMB = {};   /* vignette -> photo pleine résolution, pour l'export (netteté maximale) */
 function renderPhotoGallery(photos){
   if(!photos || !photos.length) return "";
   var cells = photos.map(function(p){
@@ -3135,6 +3145,7 @@ function renderPhotoGallery(photos){
     var src = (typeof p === "string") ? p : (p.thumb || p.src);
     var caption = (typeof p === "string") ? "" : (p.caption || "");
     if(!src) return "";
+    if(typeof p !== "string" && p.src && p.src !== src) FULL_BY_THUMB[src] = p.src;
     return '<div class="rgallery-cell"><img src="'+src+'" style="width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;">'+
       (caption ? '<div class="rgallery-cap">'+escapeHtml(caption)+'</div>' : '')+
       '</div>';
@@ -4206,29 +4217,46 @@ function applyExportLayout(wrapper, v){
 function prepareExportImages(wrapper){
   var imgs = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img"));
   var chain = Promise.resolve();
-  imgs.forEach(function(img){
-    chain = chain.then(function(){ return img.decode ? img.decode().catch(function(){}) : null; });
+  // Source pleine résolution (2200 px) quand elle existe : la vignette (1100 px) devenait floue
+  // dès que la photo est affichée en grand (1 ou 2 photos, ou export en 3x).
+  var fulls = imgs.map(function(){ return null; });
+  imgs.forEach(function(img, i){
+    chain = chain.then(function(){
+      var full = FULL_BY_THUMB[img.getAttribute("src")];
+      if(full){
+        return new Promise(function(res){
+          var f = new Image();
+          f.onload = function(){ fulls[i] = f; res(); };
+          f.onerror = function(){ res(); };
+          f.src = full;
+        });
+      }
+      return img.decode ? img.decode().catch(function(){}) : null;
+    });
   });
   chain = chain.then(function(){ applyExportLayout(wrapper, EXPORT_VARIANTS[0]); });
-  imgs.forEach(function(img){
+  imgs.forEach(function(img, i){
     chain = chain.then(function(){
-      var nw = img.naturalWidth, nh = img.naturalHeight;
+      var srcImg = fulls[i] || img;
+      var nw = srcImg.naturalWidth, nh = srcImg.naturalHeight;
       var w = parseFloat(img.style.width), h = parseFloat(img.style.height);
       if(!nw || !nh || !w || !h) return;
       var tw = Math.round(w*3), th = Math.round(h*3);
-      if(nw <= tw*1.05) return;
+      if(nw <= tw*1.05 && !fulls[i]) return;
       try{
-        var cur = img, cw = nw, ch = nh;
+        var cur = srcImg, cw = nw, ch = nh;
         while(cw/2 > tw){
           var c1 = document.createElement("canvas"); c1.width = Math.round(cw/2); c1.height = Math.round(ch/2);
           var x1 = c1.getContext("2d"); x1.imageSmoothingEnabled = true; x1.imageSmoothingQuality = "high";
           x1.drawImage(cur, 0, 0, c1.width, c1.height); cur = c1; cw = c1.width; ch = c1.height;
         }
-        var c2 = document.createElement("canvas"); c2.width = tw; c2.height = th;
+        var outW = Math.min(tw, cw), outH = Math.min(th, ch);
+        var c2 = document.createElement("canvas"); c2.width = outW; c2.height = outH;
         var x2 = c2.getContext("2d"); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high";
-        x2.drawImage(cur, 0, 0, tw, th);
-        img.src = c2.toDataURL("image/jpeg", 0.92);
+        x2.drawImage(cur, 0, 0, outW, outH);
+        img.src = c2.toDataURL("image/jpeg", 0.95);
         c2.width = c2.height = 0;
+        fulls[i] = null;
         return img.decode ? img.decode().catch(function(){}) : null;
       }catch(e){ /* repli : on garde l'image d'origine */ }
     });
@@ -4328,13 +4356,13 @@ function buildPdfCore(wrapper, pdf){
   });
 }
 
-/* JPEG le plus net possible tout en restant léger pour WhatsApp (cible ≈ 1,6 Mo) :
+/* JPEG le plus net possible tout en restant léger pour WhatsApp (cible ≈ 2,6 Mo) :
    on part d'une qualité élevée et on ne la baisse que si le fichier dépasse la cible. */
 function canvasToJpegDataUrl(canvas){
-  var qs = [0.9, 0.85, 0.8, 0.75, 0.7], out = "";
+  var qs = [0.93, 0.9, 0.87, 0.84, 0.8], out = "";
   for(var i = 0; i < qs.length; i++){
     out = canvas.toDataURL("image/jpeg", qs[i]);
-    if(out.length * 0.75 <= 1.6e6) break;
+    if(out.length * 0.75 <= 2.6e6) break;
   }
   return out;
 }
@@ -4348,7 +4376,28 @@ function captureNodeAsImage(node){
     // rapport est très long, pour rester dans les limites mémoire des téléphones.
     var H = wrapper.getBoundingClientRect().height || 1000;
     var sc = Math.max(1.5, Math.min(3, 12000/H, Math.sqrt(36e6/(EXPORT_WIDTH_PX*H))));
-    return html2canvas(wrapper, {scale:sc, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0});
+    // Les photos ne sont pas laissées à html2canvas (qui peut les rééchantillonner de façon
+    // approximative selon le téléphone) : on les masque, puis on les redessine nous-mêmes
+    // en haute qualité, à la position exacte et au pixel entier.
+    var wr = wrapper.getBoundingClientRect();
+    var photos = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img")).map(function(im){
+      var r = im.getBoundingClientRect();
+      var o = {img:im, x:r.left - wr.left, y:r.top - wr.top, w:r.width, h:r.height};
+      im.style.visibility = "hidden";
+      return o;
+    });
+    return html2canvas(wrapper, {scale:sc, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
+      var k = canvas.width / wr.width, ctx = canvas.getContext("2d"); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+      photos.forEach(function(o){
+        var x = Math.round(o.x*k), y = Math.round(o.y*k);
+        var w = Math.round((o.x+o.w)*k) - x, h = Math.round((o.y+o.h)*k) - y;
+        if(w <= 0 || h <= 0 || !o.img.naturalWidth) return;
+        ctx.fillStyle = "#f4f2ec"; ctx.fillRect(x, y, w, h);
+        try{ ctx.drawImage(o.img, x, y, w, h); }catch(e){}
+      });
+      return canvas;
+    });
   }).then(function(canvas){ document.body.removeChild(wrapper); return canvas; })
   .catch(function(err){ if(wrapper.parentNode) document.body.removeChild(wrapper); throw err; });
 }
