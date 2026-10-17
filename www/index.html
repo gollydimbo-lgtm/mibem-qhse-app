@@ -3358,9 +3358,8 @@ function buildSingleReportHtml(ctrl){
       ncHtml+
       '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
       photosHtml+
-      conclHtml+
       '<div class="rfooter-block">'+
-        '<div class="rfoot"><span>Site : <b>'+escapeHtml(ctrl.site||"—")+'</b></span><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
+        '<div class="rfoot"><span>Site : <b>'+escapeHtml(ctrl.site||"—")+'</b></span><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span></div>'+
       '</div>'+
     '</div>'
   );
@@ -4142,11 +4141,11 @@ var EXPORT_WIDTH_PX = 780;
    gagne de la place d'abord sur les marges et les tableaux, puis un peu sur la hauteur
    des cases photo, pour réduire le nombre de pages (une seule si possible). */
 var EXPORT_VARIANTS = [
-  {h2:260, h3:200, hl:380, compact:false},
-  {h2:240, h3:190, hl:340, compact:true},
-  {h2:220, h3:175, hl:310, compact:true},
-  {h2:200, h3:160, hl:280, compact:true},
-  {h2:200, h3:160, hl:280, compact:true, tight:true}
+  {h3:310, hl:380, compact:false},
+  {h3:290, hl:340, compact:true},
+  {h3:270, hl:310, compact:true},
+  {h3:250, hl:280, compact:true},
+  {h3:250, hl:280, compact:true, tight:true}
 ];
 
 /* Clone le contenu du rapport dans un conteneur hors-écran à largeur fixe A4, pour que
@@ -4178,8 +4177,8 @@ function applyExportLayout(wrapper, v){
   Array.prototype.forEach.call(root.querySelectorAll(".rgallery"), function(g){
     var large = g.classList.contains("rgallery-large");
     var cells = g.querySelectorAll(".rgallery-cell");
-    var perRow = large ? 2 : (cells.length > 6 ? 3 : 2);
-    var boxH = large ? v.hl : (perRow === 2 ? v.h2 : v.h3);
+    var perRow = large ? 2 : 3;
+    var boxH = large ? v.hl : v.h3;
     g.style.gap = "10px";
     Array.prototype.forEach.call(cells, function(c){
       c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
@@ -4213,7 +4212,7 @@ function prepareExportImages(wrapper){
       var nw = img.naturalWidth, nh = img.naturalHeight;
       var w = parseFloat(img.style.width), h = parseFloat(img.style.height);
       if(!nw || !nh || !w || !h) return;
-      var tw = Math.round(w*2), th = Math.round(h*2);
+      var tw = Math.round(w*3), th = Math.round(h*3);
       if(nw <= tw*1.05) return;
       try{
         var cur = img, cw = nw, ch = nh;
@@ -4316,7 +4315,6 @@ function buildPdfCore(wrapper, pdf){
       pdf.addImage(sc.toDataURL("image/jpeg", 0.9), "JPEG", xOff, margin, imgW, sliceH/ratio, undefined, "FAST");
       sc.width = sc.height = 0;
       pdf.setFontSize(7); pdf.setTextColor(120);
-      pdf.text("MIBEM COMPANY — QHSE" + (refTxt ? "  ·  " + refTxt : ""), margin, pageH - 9);
       if(total > 1) pdf.text("Page " + (i+1) + " / " + total, pageW - margin, pageH - 9, {align:"right"});
     });
     var dataUri = pdf.output("datauristring");
@@ -4327,12 +4325,27 @@ function buildPdfCore(wrapper, pdf){
   });
 }
 
+/* JPEG le plus net possible tout en restant léger pour WhatsApp (cible ≈ 1,6 Mo) :
+   on part d'une qualité élevée et on ne la baisse que si le fichier dépasse la cible. */
+function canvasToJpegDataUrl(canvas){
+  var qs = [0.9, 0.85, 0.8, 0.75, 0.7], out = "";
+  for(var i = 0; i < qs.length; i++){
+    out = canvas.toDataURL("image/jpeg", qs[i]);
+    if(out.length * 0.75 <= 1.6e6) break;
+  }
+  return out;
+}
+
 /* Image (PNG/JPEG) : même mise en page compacte, sans réduction du texte. */
 function captureNodeAsImage(node){
   var wrapper = cloneForExport(node);
   return wrapper._ready.then(function(){
     chooseExportLayout(wrapper, 297/210, false);
-    return html2canvas(wrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0});
+    // Résolution adaptée : jusqu'à 3x (≈ 2340 px de large), réduite automatiquement si le
+    // rapport est très long, pour rester dans les limites mémoire des téléphones.
+    var H = wrapper.getBoundingClientRect().height || 1000;
+    var sc = Math.max(1.5, Math.min(3, 12000/H, Math.sqrt(36e6/(EXPORT_WIDTH_PX*H))));
+    return html2canvas(wrapper, {scale:sc, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0});
   }).then(function(canvas){ document.body.removeChild(wrapper); return canvas; })
   .catch(function(err){ if(wrapper.parentNode) document.body.removeChild(wrapper); throw err; });
 }
@@ -4341,7 +4354,7 @@ function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
     captureNodeAsImage(node).then(function(canvas){
-      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      var dataUrl = canvasToJpegDataUrl(canvas);
       if(isNativeApp() && window.Capacitor.Plugins.Media){
         saveImageToNativeGallery(dataUrl, filename)
           .then(function(){ toast("✔ Enregistré dans Galerie photo > "+MIBEM_ALBUM_NAME); })
@@ -4426,11 +4439,11 @@ function shareNode(node, filename, text, kind){
   if(kind === "png"){
     toast("Préparation de l'image...");
     captureNodeAsImage(node).then(function(canvas){
-      canvas.toBlob(function(blob){
-        blobToBase64(blob).then(function(base64){
-          shareBlobOrDownload(base64, blob, filename+".jpg", "image/jpeg", text, "image");
-        });
-      }, "image/jpeg", 0.85);
+      var dataUrl = canvasToJpegDataUrl(canvas);
+      var base64 = dataUrl.substring(dataUrl.indexOf(",")+1);
+      var bin = atob(base64), arr = new Uint8Array(bin.length);
+      for(var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      shareBlobOrDownload(base64, new Blob([arr], {type:"image/jpeg"}), filename+".jpg", "image/jpeg", text, "image");
     }).catch(function(err){
       console.error(err);
       toast("Erreur lors de la préparation du partage.");
