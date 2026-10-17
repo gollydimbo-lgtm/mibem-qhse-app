@@ -4177,11 +4177,14 @@ function applyExportLayout(wrapper, v){
   Array.prototype.forEach.call(root.querySelectorAll(".rgallery"), function(g){
     var large = g.classList.contains("rgallery-large");
     var cells = g.querySelectorAll(".rgallery-cell");
-    var perRow = large ? 2 : 3;
-    var boxH = large ? v.hl : v.h3;
+    var n = cells.length;
+    // 3 par ligne dès 3 photos ; avec 1 ou 2 photos on agrandit pour ne pas laisser de vide.
+    var perRow = large ? 2 : (n >= 3 ? 3 : 2);
+    var boxH = large ? v.hl : (n >= 3 ? v.h3 : (n === 2 ? v.h3 + 60 : v.h3 + 90));
     g.style.gap = "10px";
+    g.style.justifyContent = (n === 1 && !large) ? "center" : "flex-start";
     Array.prototype.forEach.call(cells, function(c){
-      c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
+      c.style.width = (n === 1 && !large) ? "62%" : "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
       var img = c.querySelector("img"); if(!img) return;
       var nw = img.naturalWidth, nh = img.naturalHeight;
       if(!nw || !nh) return;
