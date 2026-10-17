@@ -513,6 +513,20 @@ main{
   margin-top:14px;padding-top:10px;border-top:2px solid #eee;
   break-inside:avoid;page-break-inside:avoid;
 }
+.report-doc .rref{font-size:.68rem;font-weight:700;color:var(--gold-dark);letter-spacing:.03em;margin-top:2px;}
+.report-doc .rsummary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px;}
+.report-doc .rsummary .rs{border:1px solid #e2ddd0;border-radius:6px;padding:6px 4px;text-align:center;background:#faf9f4;}
+.report-doc .rsummary .rs b{display:block;font-size:1.05rem;color:var(--dark2);line-height:1.15;}
+.report-doc .rsummary .rs span{font-size:.62rem;color:#666;}
+.report-doc .rsummary .rs.ok b{color:var(--ok);} .report-doc .rsummary .rs.warn b{color:var(--warn);} .report-doc .rsummary .rs.nc b{color:var(--nc);}
+.report-doc .reval{border-left:4px solid var(--dark2);background:#f7f2f4;padding:7px 9px;border-radius:0 6px 6px 0;font-size:.76rem;margin-bottom:4px;}
+.report-doc .reval.nc{border-left-color:var(--nc);background:#fdf3f2;} .report-doc .reval.warn{border-left-color:var(--warn);background:#fdf7e9;} .report-doc .reval.ok{border-left-color:var(--ok);background:#f1f8f4;}
+.report-doc .rconcl{font-size:.76rem;line-height:1.45;margin-bottom:6px;}
+.report-doc .rsign{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;break-inside:avoid;}
+.report-doc .rsign .sg{border:1px solid #cfc9b8;border-radius:6px;padding:5px 7px;min-height:62px;font-size:.66rem;color:#555;}
+.report-doc .rsign .sg b{display:block;color:var(--dark2);font-size:.7rem;margin-bottom:2px;}
+.report-doc .rsign .sg i{display:block;margin-top:20px;border-top:1px solid #bbb;padding-top:2px;font-style:normal;color:#999;}
+.report-doc .rnote{font-size:.62rem;color:#777;font-style:italic;margin-top:4px;}
 .report-doc .rfoot{
   margin-top:10px;display:flex;justify-content:space-between;
   font-size:.76rem;color:#555;
@@ -540,8 +554,8 @@ main{
   width:100%;height:150px;min-height:150px;object-fit:contain;object-position:center;display:block;background:#f4f2ec;
 }
 .report-doc .rgallery .rgallery-cap{
-  font-size:.62rem;color:#666;padding:3px 5px;text-align:center;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:.64rem;color:#555;padding:3px 5px;text-align:center;
+  overflow-wrap:anywhere;white-space:normal;line-height:1.25;
 }
 /* Variante grande — photo de la fiche de rapport du quart : 2 par ligne maximum
    (souvent une seule), image nettement plus haute pour rester immédiatement
@@ -3155,20 +3169,39 @@ function efficaciteBadge(v){
   return '<span class="rbadge '+cls+'">'+escapeHtml(label)+'</span>';
 }
 
+/* Référence de traçabilité du rapport : dérivée de la date, de l'heure et de l'identifiant
+   interne du contrôle — jamais saisie à la main, toujours la même pour un même contrôle. */
+function reportReference(ctrl){
+  var d = String(ctrl.date||"").replace(/-/g,"");
+  var h = String(ctrl.heure||"").replace(":","");
+  var m = String(ctrl.id||"").match(/^c(\d+)/);
+  return "CQ-" + d + "-" + h + (m ? "-" + m[1] : "");
+}
+
 function buildSingleReportHtml(ctrl){
   var order = ctrl.paramOrder || Object.keys(ctrl.parametres);
+  var ncKeysAll = Object.keys(ctrl.nc || {});
+  var ncId = {}; ncKeysAll.forEach(function(k, i){ ncId[k] = "NC-" + (i+1); });
+  var cnt = {ok:0, warn:0, nc:0, noSample:0, total:0};
+  order.forEach(function(p){
+    var pd = ctrl.parametres[p]; if(!pd) return;
+    cnt.total++; cnt[pd.status] = (cnt[pd.status]||0) + 1;
+    if(!pd.echantillon) cnt.noSample++;
+  });
+  var photoN = 0;
 
   // BLOC 2 — tableau des résultats (colonnes largeur auto, jamais de texte coupé).
   var rows = order.map(function(p){
     var pdata = ctrl.parametres[p];
     if(!pdata) return "";
     var ech = pdata.echantillon ? escapeHtml(pdata.echantillon) : "—";
-    return '<tr><td>'+escapeHtml(p)+'</td><td class="rcell-center">'+ech+'</td><td class="rcell-center">'+statusBadge(pdata.status)+'</td></tr>';
+    return '<tr><td>'+escapeHtml(p)+'</td><td class="rcell-center">'+ech+'</td><td class="rcell-center">'+statusBadge(pdata.status)+'</td>'+
+      (ncKeysAll.length ? '<td class="rcell-center"><b>'+(ncId[p]||"")+'</b></td>' : '')+'</tr>';
   }).join("");
   if(ctrl.typeBouteille){
-    rows += '<tr><td>Type de bouteille</td><td class="rcell-center">—</td><td class="rcell-center">'+escapeHtml(ctrl.typeBouteille)+'</td></tr>';
+    rows += '<tr><td>Type de bouteille</td><td class="rcell-center">—</td><td class="rcell-center">'+escapeHtml(ctrl.typeBouteille)+'</td>'+(ncKeysAll.length ? '<td></td>' : '')+'</tr>';
   }
-  var resultsTable = '<table><tr><th>Paramètre</th><th>Échantillon</th><th>Statut</th></tr>'+rows+'</table>';
+  var resultsTable = '<table><tr><th>Paramètre</th><th>Échantillon</th><th>Statut</th>'+(ncKeysAll.length ? '<th>Réf. NC</th>' : '')+'</tr>'+rows+'</table>';
 
   // Non-conformités : tableau compact, une ligne par NC, plutôt que de longs blocs répétés.
   var ncHtml = "";
@@ -3178,7 +3211,7 @@ function buildSingleReportHtml(ctrl){
       var d = ctrl.nc[p];
       var photos = (d.photos||[]).map(function(ph){ return (typeof ph === "string") ? ph : ph.src; }).filter(Boolean);
       return '<tr>'+
-        '<td class="rwrap">'+escapeHtml(p)+'</td>'+
+        '<td class="rwrap"><b>'+ncId[p]+'</b><br>'+escapeHtml(p)+'</td>'+
         '<td class="rwrap">'+escapeHtml(d.description||"—")+'</td>'+
         '<td class="rcell-center rwrap">'+escapeHtml(d.niveau||"—")+'</td>'+
         '<td class="rcell-center rwrap">'+escapeHtml(d.classeDefaut||"—")+'</td>'+
@@ -3191,11 +3224,11 @@ function buildSingleReportHtml(ctrl){
     ncHtml = '<h3 class="rsection">🚨 Non-conformités détectées</h3>'+
       '<table style="table-layout:fixed;">'+
         '<colgroup>'+
-          '<col style="width:11%;"><col style="width:20%;"><col style="width:9%;">'+
-          '<col style="width:9%;"><col style="width:14%;"><col style="width:16%;">'+
-          '<col style="width:8%;"><col style="width:13%;">'+
+          '<col style="width:15%;"><col style="width:18%;"><col style="width:9%;">'+
+          '<col style="width:9%;"><col style="width:13%;"><col style="width:14%;">'+
+          '<col style="width:10%;"><col style="width:12%;">'+
         '</colgroup>'+
-        '<tr><th>Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+
+        '<tr><th>Réf. / Paramètre</th><th>Description</th><th>Niveau</th><th>Classe</th><th>Défaut</th><th>Action immédiate</th><th>Traitée</th><th>Photo</th></tr>'+
         ncRows+
       '</table>';
     // Cause, clôture et boucle CAPA (action préventive + vérification d'efficacité,
@@ -3205,7 +3238,7 @@ function buildSingleReportHtml(ctrl){
       var d = ctrl.nc[p];
       var hasContent = (d.cause && d.cause.trim()) || (d.actionPreventive && d.actionPreventive.trim());
       if(hasContent){
-        ncHtml += '<div class="rnc"><b>'+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
+        ncHtml += '<div class="rnc"><b>'+ncId[p]+' · '+escapeHtml(p)+' — Cause :</b> '+escapeHtml(d.cause||"—")+
           (d.ncTraitee==="Oui" && d.clotureDetails ? ' <b>· Clôture :</b> '+escapeHtml(d.clotureDetails) : '')+
           (d.actionPreventive && d.actionPreventive.trim() ? '<br><b>Action préventive :</b> '+escapeHtml(d.actionPreventive) : '')+
           ' <b>· Efficacité :</b> '+efficaciteBadge(d.verifEfficacite)+
@@ -3218,7 +3251,8 @@ function buildSingleReportHtml(ctrl){
     ncKeys.forEach(function(p){
       (ctrl.nc[p].photos||[]).forEach(function(ph){
         var src = (typeof ph === "string") ? ph : ph.src;
-        if(src) ncPhotos.push({src:src, caption:p});
+        var cap = (typeof ph === "object" && ph.caption) ? " — " + ph.caption : "";
+        if(src) ncPhotos.push({src:src, caption:"P"+(++photoN)+" · "+ncId[p]+" · "+p+cap});
       });
     });
     if(ncPhotos.length){
@@ -3234,23 +3268,56 @@ function buildSingleReportHtml(ctrl){
   var alertClass = (ctrl.alertes && ctrl.alertes.trim()) ? "ralert" : "ralert rempty";
   var terrainPhotos = (ctrl.photos||[]).map(function(p){
     var src = (typeof p === "string") ? p : p.src;
-    return src ? {src:src, caption:""} : null;
+    var cap = (typeof p === "object" && p.caption) ? " — " + p.caption : "";
+    return src ? {src:src, caption:"P"+(++photoN)+" · Photo terrain"+cap} : null;
   }).filter(Boolean);
   var photosHtml = terrainPhotos.length
     ? '<h3 class="rsection">📸 Photos terrain (preuves)</h3>'+renderPhotoGallery(terrainPhotos)
     : "";
 
+  // Synthèse des résultats : uniquement ce qui a réellement été enregistré. Les taux portent
+  // sur des PARAMÈTRES, pas sur des unités physiques : aucune décision de lot n'est prise ici.
+  var ratePct = cnt.total ? (Math.round(cnt.nc*1000/cnt.total)/10).toString().replace(".",",") + " %" : "—";
+  var evalCls = cnt.nc ? "nc" : (cnt.warn ? "warn" : (cnt.total ? "ok" : ""));
+  var evalTxt = !cnt.total ? "ÉVALUATION INCOMPLÈTE — aucun paramètre enregistré."
+    : cnt.nc ? "NON-CONFORMITÉ(S) CONSTATÉE(S) — " + cnt.nc + " paramètre(s) à traiter avant toute décision sur le lot."
+    : cnt.warn ? "POINT(S) À SURVEILLER — " + cnt.warn + " paramètre(s) sous surveillance, aucune non-conformité constatée."
+    : "AUCUNE NON-CONFORMITÉ CONSTATÉE sur les paramètres contrôlés.";
+  var summaryHtml = '<div class="rkeep"><h3 class="rsection">📊 Synthèse des résultats</h3>'+
+    '<div class="rsummary">'+
+      '<div class="rs"><b>'+cnt.total+'</b><span>Paramètres</span></div>'+
+      '<div class="rs ok"><b>'+(cnt.ok||0)+'</b><span>Conformes</span></div>'+
+      '<div class="rs warn"><b>'+(cnt.warn||0)+'</b><span>À surveiller</span></div>'+
+      '<div class="rs nc"><b>'+(cnt.nc||0)+'</b><span>Non conformes</span></div>'+
+    '</div>'+
+    '<div class="reval '+evalCls+'"><b>'+evalTxt+'</b><br>Taux de paramètres non conformes : <b>'+ratePct+'</b> (calculé sur les paramètres, et non sur les unités physiques).'+
+      (cnt.noSample ? '<br>Échantillon non renseigné pour '+cnt.noSample+' paramètre(s).' : '')+'</div></div>';
+
+  // Conclusion factuelle + espaces de validation VIDES (aucune signature ni libération générée).
+  var traitees = 0; ncKeysAll.forEach(function(k){ if(ctrl.nc[k].ncTraitee === "Oui") traitees++; });
+  var concl = 'Contrôle du lot <b>'+escapeHtml(ctrl.lot||"non renseigné")+'</b> ('+escapeHtml(ctrl.produit)+') réalisé le '+escapeHtml(dmy(ctrl.date))+' à '+escapeHtml(ctrl.heure)+
+    ' sur '+escapeHtml(ctrl.ligne)+'. '+cnt.total+' paramètre(s) contrôlé(s) : '+(cnt.ok||0)+' conforme(s), '+(cnt.warn||0)+' à surveiller, '+(cnt.nc||0)+' non conforme(s).'+
+    (ncKeysAll.length ? ' Non-conformités : '+ncKeysAll.length+' enregistrée(s), '+traitees+' traitée(s), '+(ncKeysAll.length-traitees)+' en cours de traitement.' : ' Aucune non-conformité enregistrée.');
+  var conclHtml = '<div class="rkeep"><h3 class="rsection">✅ Conclusion et validation</h3><div class="rconcl">'+concl+'</div>'+
+    '<div class="rsign">'+
+      '<div class="sg"><b>Contrôleur</b>'+escapeHtml(ctrl.controleur||"")+'<i>Date / Signature</i></div>'+
+      '<div class="sg"><b>Responsable qualité</b>&nbsp;<i>Nom, date / Signature</i></div>'+
+      '<div class="sg"><b>Décision sur le lot</b>&nbsp;<i>Nom, date / Signature</i></div>'+
+    '</div>'+
+    '<div class="rnote">Ce rapport consigne les résultats du contrôle. Il ne vaut pas décision de libération du lot.</div></div>';
+
   return (
     '<div class="report-doc" id="reportDocInner">'+
       '<div class="rheader">'+
         '<img class="rlogo" src="'+LOGO_DATA_URI+'" alt="MIBEM COMPANY">'+
-        '<div><div class="rtitle">📋 Rapport de contrôle</div><div class="rcaption">MIBEM COMPANY — QHSE</div></div>'+
+        '<div><div class="rtitle">📋 RAPPORT DE CONTRÔLE QUALITÉ</div><div class="rcaption">MIBEM COMPANY — QHSE</div><div class="rref">Réf. '+escapeHtml(reportReference(ctrl))+'</div></div>'+
       '</div>'+
       '<div class="rmeta-grid">'+
         '<div class="rmeta-col">'+
           '<div class="rmeta-item"><span>Date</span><b>'+escapeHtml(dmy(ctrl.date))+'</b></div>'+
           '<div class="rmeta-item"><span>Heure</span><b>'+escapeHtml(ctrl.heure)+'</b></div>'+
           '<div class="rmeta-item"><span>Quart</span><b>'+escapeHtml(ctrl.quart)+'</b></div>'+
+          '<div class="rmeta-item"><span>Site</span><b>'+escapeHtml(ctrl.site||"—")+'</b></div>'+
         '</div>'+
         '<div class="rmeta-col">'+
           '<div class="rmeta-item"><span>Ligne</span><b>'+escapeHtml(ctrl.ligne)+'</b></div>'+
@@ -3260,14 +3327,17 @@ function buildSingleReportHtml(ctrl){
         '<div class="rmeta-col">'+
           '<div class="rmeta-item"><span>Emballage</span><b>'+escapeHtml(ctrl.emballage)+'</b></div>'+
           '<div class="rmeta-item"><span>N° de lot</span><b>'+escapeHtml(ctrl.lot||"—")+'</b></div>'+
+          '<div class="rmeta-item"><span>Contrôleur</span><b>'+escapeHtml(ctrl.controleur||"—")+'</b></div>'+
         '</div>'+
       '</div>'+
-      '<h3 class="rsection">⚙️ Paramètres contrôlés</h3>'+
+      summaryHtml+
+      '<h3 class="rsection">⚙️ Détail des paramètres contrôlés</h3>'+
       resultsTable+
       ncHtml+
+      '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
+      photosHtml+
+      conclHtml+
       '<div class="rfooter-block">'+
-        '<h3 class="rsection">⚠️ Points d\'alerte</h3><div class="'+alertClass+'">'+alertText+'</div>'+
-        photosHtml+
         '<div class="rfoot"><span>Site : <b>'+escapeHtml(ctrl.site||"—")+'</b></span><span>Contrôleur : <b>'+escapeHtml(ctrl.controleur)+'</b></span><span>MIBEM COMPANY — QHSE</span></div>'+
       '</div>'+
     '</div>'
@@ -4084,7 +4154,11 @@ function cloneForExport(node){
    toujours "object-fit"), et la photo est entière, sans recadrage. */
 function fitExportImages(wrapper){
   var imgs = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img"));
-  return Promise.all(imgs.map(function(img){
+  // Une photo à la fois : décodage + réduction à la taille exacte de la case (x2 pour la
+  // capture) puis libération — évite de saturer la mémoire des téléphones modestes.
+  var chain = Promise.resolve();
+  imgs.forEach(function(img){
+    chain = chain.then(function(){
     var ready = (img.decode ? img.decode().catch(function(){}) : Promise.resolve());
     return ready.then(function(){
       var nw = img.naturalWidth, nh = img.naturalHeight;
@@ -4103,8 +4177,29 @@ function fitExportImages(wrapper){
       cell.style.paddingTop = Math.floor((boxH - h)/2) + "px";
       cell.style.paddingBottom = Math.ceil((boxH - h)/2) + "px";
       cell.style.background = "#f4f2ec";
+      // Version optimisée pour le PDF : réduction progressive (moitié par moitié) pour
+      // conserver les détails, JPEG qualité 92. L'original reste intact dans l'application.
+      var tw = w*2, th = h*2;
+      if(nw > tw*1.05){
+        try{
+          var cur = img, cw = nw, ch = nh;
+          while(cw/2 > tw){
+            var c1 = document.createElement("canvas"); c1.width = Math.round(cw/2); c1.height = Math.round(ch/2);
+            var x1 = c1.getContext("2d"); x1.imageSmoothingEnabled = true; x1.imageSmoothingQuality = "high";
+            x1.drawImage(cur, 0, 0, c1.width, c1.height); cur = c1; cw = c1.width; ch = c1.height;
+          }
+          var c2 = document.createElement("canvas"); c2.width = tw; c2.height = th;
+          var x2 = c2.getContext("2d"); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high";
+          x2.drawImage(cur, 0, 0, tw, th);
+          img.src = c2.toDataURL("image/jpeg", 0.92);
+          c2.width = c2.height = 0;
+          return img.decode ? img.decode().catch(function(){}) : null;
+        }catch(e){ /* repli : on garde l'image d'origine */ }
+      }
     });
-  }));
+    });
+  });
+  return chain;
 }
 
 function buildPdfFromNode(node){
@@ -4127,6 +4222,9 @@ function buildPdfFromNode(node){
 }
 function buildPdfCore(wrapper, pdf, margin, maxW, SCALE){
   var pageH = pdf.internal.pageSize.getHeight();
+  var pageW0 = pdf.internal.pageSize.getWidth();
+  var refEl = wrapper.querySelector(".rref");
+  if(refEl) wrapper.setAttribute("data-ref", refEl.textContent.replace(/^Réf\.\s*/, "Réf. "));
   var maxH = pageH - margin*2;
   var reportClone = wrapper.firstChild;
   var wrapperTop = wrapper.getBoundingClientRect().top;
@@ -4171,6 +4269,8 @@ function buildPdfCore(wrapper, pdf, margin, maxW, SCALE){
       cursor = cut;
     }
 
+    var totalPages = pages.length;
+    var refTxt = wrapper.getAttribute("data-ref") || "";
     pages.forEach(function(p, i){
       var sliceH = p.to - p.from;
       if(sliceH <= 0) return;
@@ -4184,6 +4284,9 @@ function buildPdfCore(wrapper, pdf, margin, maxW, SCALE){
       if(i>0) pdf.addPage();
       pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.88), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
       sliceCanvas.width = sliceCanvas.height = 0;
+      pdf.setFontSize(7); pdf.setTextColor(120);
+      pdf.text("MIBEM COMPANY — QHSE" + (refTxt ? "  ·  " + refTxt : ""), margin, pageH - 9);
+      pdf.text("Page " + (i+1) + " / " + totalPages, pageW0 - margin, pageH - 9, {align:"right"});
     });
 
     var dataUri = pdf.output("datauristring");
