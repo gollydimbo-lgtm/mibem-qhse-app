@@ -919,6 +919,23 @@ main{
       <div class="photo-grid photo-grid-large" id="synthPhotoList"></div>
     </div>
     <div class="card" data-rap="synth">
+      <h2>🛑 LIGNES EN ARRÊT</h2>
+      <p class="hint" style="margin-top:-4px;">Une ligne n'a pas été contrôlée parce qu'elle était à l'arrêt ? Indiquez-la ici avec la cause : elle apparaîtra dans la synthèse du quart.</p>
+      <div class="field"><label>Ligne</label><select id="stop-ligne"></select></div>
+      <div class="field"><label>Cause de l'arrêt</label>
+        <input type="text" id="stop-cause" list="stop-causes" placeholder="Choisir ou saisir la cause">
+        <datalist id="stop-causes">
+          <option value="Panne machine"><option value="Maintenance planifiée"><option value="Manque de matière première">
+          <option value="Manque d'emballages"><option value="Changement de format / de produit"><option value="Nettoyage / désinfection (CIP)">
+          <option value="Pas de production planifiée"><option value="Manque de personnel"><option value="Coupure d'énergie ou d'eau">
+          <option value="Attente décision qualité">
+        </datalist>
+      </div>
+      <div class="field"><label>Période (facultatif)</label><input type="text" id="stop-periode" placeholder="ex : 22h00 à 02h30"></div>
+      <button class="btn btn-dark btn-block" id="btnAddStop">➕ Ajouter la ligne en arrêt</button>
+      <div id="stopList" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" data-rap="synth">
       <h2>Synthèse de fin de quart</h2>
       <p class="hint" style="margin-top:-6px;">Regroupe automatiquement tous les contrôles et points d'alerte enregistrés depuis le début du quart.</p>
       <div class="field" style="margin-top:10px;">
@@ -1923,6 +1940,7 @@ var state = {
   ncData: {},            // détails NC courants {label: {...}}
   terrainPhotos: [],     // photos preuves terrain du contrôle en cours [{src, caption}]
   synthPhotos: [],       // photos de la fiche de rapport papier jointes à la synthèse du quart
+  stoppedLines: [],      // lignes à l'arrêt pendant le quart [{ligne, cause, periode}]
   typeBouteille: "LOCALE", // valeur courante du champ Type de bouteille (LOCALE / IMPORT)
   editingId: null,       // si on édite un contrôle existant
   _mibemAlbumId: null,   // identifiant de l'album photo natif "MIBEM QHSE" (Android), mis en cache
@@ -1940,6 +1958,7 @@ function saveShiftToStorage(){
   var payload = {
     shiftControls: state.shiftControls,
     synthPhotos: state.synthPhotos,
+    stoppedLines: state.stoppedLines,
     nextId: state.nextId
   };
   clearTimeout(_saveShiftTimer);
@@ -1961,6 +1980,7 @@ function loadShiftFromStorage(){
   function applyParsed(parsed){
     state.shiftControls = (parsed && parsed.shiftControls) || [];
     state.synthPhotos = (parsed && parsed.synthPhotos) || [];
+    state.stoppedLines = (parsed && parsed.stoppedLines) || [];
     state.nextId = (parsed && parsed.nextId) || (state.shiftControls.length + 1);
   }
   function fallbackToLocalStorage(){
@@ -3387,6 +3407,52 @@ function openSingleReport(ctrl){
 }
 
 /* ===================== SYNTHÈSE FIN DE QUART ===================== */
+/* Statistiques par ligne : un contrôle est conforme s'il ne contient aucune non-conformité. */
+function computeLineStats(controls){
+  var order = [], map = {};
+  controls.forEach(function(c){
+    var k = c.ligne || "—";
+    if(!map[k]){ map[k] = {ligne:k, n:0, conf:0, nonConf:0, ncCount:0}; order.push(k); }
+    var nb = Object.keys(c.nc || {}).length;
+    map[k].n++; map[k].ncCount += nb;
+    if(nb === 0) map[k].conf++; else map[k].nonConf++;
+  });
+  return order.map(function(k){ return map[k]; });
+}
+function pct(a, b){ return b ? (Math.round(a*1000/b)/10).toString().replace(".", ",") + " %" : "—"; }
+
+function renderStoppedLines(){
+  var sel = $("#stop-ligne");
+  if(sel && state.catalog){
+    var prev = sel.value;
+    sel.innerHTML = '<option value="">— Choisir une ligne —</option>' +
+      state.catalog.machines.map(function(m){ return '<option value="'+escapeHtml(m.nom)+'">'+escapeHtml(m.nom)+'</option>'; }).join("");
+    sel.value = prev;
+  }
+  var host = $("#stopList"); if(!host) return;
+  host.innerHTML = state.stoppedLines.map(function(x, i){
+    return '<div class="ralert" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
+      '<span><b>'+escapeHtml(x.ligne)+'</b> — '+escapeHtml(x.cause)+(x.periode ? ' <small>('+escapeHtml(x.periode)+')</small>' : '')+'</span>'+
+      '<button type="button" class="btn btn-ghost" data-stopdel="'+i+'" style="padding:4px 10px;">✕</button></div>';
+  }).join("");
+  $all("[data-stopdel]", host).forEach(function(b){
+    b.addEventListener("click", function(){
+      state.stoppedLines.splice(parseInt(b.getAttribute("data-stopdel"), 10), 1);
+      saveShiftToStorage(); renderStoppedLines(); refreshSynthIfShown();
+    });
+  });
+}
+function refreshSynthIfShown(){ if($("#synthDocWrap")) renderSynthPreview(); }
+function addStoppedLine(){
+  var l = $("#stop-ligne").value, c = ($("#stop-cause").value || "").trim(), per = ($("#stop-periode").value || "").trim();
+  if(!l){ toast("Choisissez la ligne."); return; }
+  if(!c){ toast("Indiquez la cause de l'arrêt."); return; }
+  state.stoppedLines.push({ligne:l, cause:c, periode:per});
+  $("#stop-cause").value = ""; $("#stop-periode").value = ""; $("#stop-ligne").value = "";
+  saveShiftToStorage(); renderStoppedLines(); refreshSynthIfShown();
+  toast("Ligne en arrêt ajoutée.");
+}
+
 function buildSynthesisHtml(){
   var controls = state.shiftControls;
   var visa = $("#synth-visa").value || "—";
@@ -3415,7 +3481,7 @@ function buildSynthesisHtml(){
 
   // KPI qualité : taux de conformité du quart (contrôles sans aucune NC / total).
   var controlesConformes = controls.filter(function(c){ return Object.keys(c.nc).length === 0; }).length;
-  var tauxConformite = controls.length ? Math.round((controlesConformes/controls.length)*100) : 100;
+  var tauxConformite = controls.length ? Math.round((controlesConformes/controls.length)*100) : 0;
   var tauxClass = tauxConformite >= 95 ? "rbadge-ok" : (tauxConformite >= 80 ? "rbadge-warn" : "rbadge-nc");
 
   // Détection automatique de récurrence (analyse statistique simple, façon Pareto) :
@@ -3434,7 +3500,7 @@ function buildSynthesisHtml(){
   var indicatorsTable =
     '<table><tr><th>Contrôles</th><th>Taux conformité</th><th>NC totales</th><th>Mineures</th><th>Majeures</th><th>Critiques</th></tr>'+
     '<tr><td class="rcell-center">'+controls.length+'</td>'+
-    '<td class="rcell-center"><span class="rbadge '+tauxClass+'">'+tauxConformite+' %</span></td>'+
+    '<td class="rcell-center"><span class="rbadge '+tauxClass+'">'+(controls.length ? tauxConformite+' %' : '—')+'</span></td>'+
     '<td class="rcell-center">'+totalNC+'</td>'+
     '<td class="rcell-center">'+totalMin+'</td><td class="rcell-center">'+totalMaj+'</td><td class="rcell-center">'+totalCrit+'</td></tr></table>';
 
@@ -3465,10 +3531,29 @@ function buildSynthesisHtml(){
       '<td class="rcell-center">'+Object.keys(c.nc).length+'</td><td class="rcell-center">'+photoCount+'</td></tr>';
   }).join("");
 
-  var ligneRows = Object.keys(lignesStat).map(function(l){
-    var s = lignesStat[l];
-    return '<tr><td>'+escapeHtml(l)+'</td><td class="rcell-center">'+s.n+'</td><td class="rcell-center">'+s.nc+'</td></tr>';
-  }).join("");
+  var lineStats = computeLineStats(controls);
+  var totConf = lineStats.reduce(function(a, x){ return a + x.conf; }, 0);
+  var totNonConf = lineStats.reduce(function(a, x){ return a + x.nonConf; }, 0);
+  var ligneRows = lineStats.map(function(x){
+    var cls = x.nonConf === 0 ? "rbadge-ok" : (x.conf/x.n >= 0.8 ? "rbadge-warn" : "rbadge-nc");
+    return '<tr><td class="rwrap">'+escapeHtml(x.ligne)+'</td><td class="rcell-center">'+x.n+'</td>'+
+      '<td class="rcell-center">'+x.conf+'</td><td class="rcell-center">'+x.nonConf+'</td>'+
+      '<td class="rcell-center"><span class="rbadge '+cls+'">'+pct(x.conf, x.n)+'</span></td>'+
+      '<td class="rcell-center">'+pct(x.nonConf, x.n)+'</td></tr>';
+  }).join("") +
+    '<tr style="font-weight:700;"><td>Total quart</td><td class="rcell-center">'+controls.length+'</td>'+
+    '<td class="rcell-center">'+totConf+'</td><td class="rcell-center">'+totNonConf+'</td>'+
+    '<td class="rcell-center">'+pct(totConf, controls.length)+'</td><td class="rcell-center">'+pct(totNonConf, controls.length)+'</td></tr>';
+  var stopHtml = "";
+  if(state.stoppedLines && state.stoppedLines.length){
+    stopHtml = '<h3 class="rsection">🛑 Lignes en arrêt</h3>'+
+      '<table style="table-layout:fixed;"><colgroup><col style="width:30%;"><col style="width:46%;"><col style="width:24%;"></colgroup>'+
+      '<tr><th>Ligne</th><th>Cause de l\'arrêt</th><th>Période</th></tr>'+
+      state.stoppedLines.map(function(x){
+        return '<tr><td class="rwrap">'+escapeHtml(x.ligne)+'</td><td class="rwrap">'+escapeHtml(x.cause)+'</td><td class="rwrap rcell-center">'+escapeHtml(x.periode||"—")+'</td></tr>';
+      }).join("")+
+      '</table><p style="font-size:.72rem;color:#666;margin:4px 0 0;">Aucun contrôle qualité réalisé sur ces lignes pendant l\'arrêt.</p>';
+  }
 
   // Non-conformités du quart : tableau compact plutôt que blocs répétés.
   var ncRows = [];
@@ -3535,7 +3620,10 @@ function buildSynthesisHtml(){
       indicatorsTable+
       recurrenceHtml+
       '<h3 class="rsection">🏭 Détail par ligne</h3>'+
-      '<table><tr><th>Ligne</th><th>Contrôles</th><th>NC</th></tr>'+ligneRows+'</table>'+
+      '<table style="table-layout:fixed;"><colgroup><col style="width:30%;"><col style="width:14%;"><col style="width:14%;"><col style="width:12%;"><col style="width:15%;"><col style="width:15%;"></colgroup>'+
+      '<tr><th>Ligne</th><th>Contr.</th><th>Conf.</th><th>Non conf.</th><th>% conf.</th><th>% non conf.</th></tr>'+ligneRows+'</table>'+
+      '<p style="font-size:.72rem;color:#666;margin:4px 0 0;">Contr. = contrôles. Un contrôle est conforme lorsqu\'il ne contient aucune non-conformité.</p>'+
+      stopHtml+
       '<h3 class="rsection">🧾 Journal des contrôles</h3>'+
       '<table style="table-layout:fixed;">'+
         '<colgroup>'+
@@ -3999,7 +4087,7 @@ function renderAwarenessPreview(){
 
 function renderSynthPreview(){
   var host = $("#synthPreviewHost");
-  if(state.shiftControls.length === 0){
+  if(state.shiftControls.length === 0 && !(state.stoppedLines && state.stoppedLines.length)){
     host.innerHTML = '<div class="card"><div class="empty-state">Aucun contrôle enregistré pour ce quart. Enregistrez au moins un contrôle avant de générer la synthèse.</div></div>';
     return;
   }
@@ -4680,6 +4768,14 @@ function buildShiftExcelWorkbook(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetParametres), "Détail paramètres");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetNC), "Non-conformités");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sheetAlertes), "Points d'alerte");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(computeLineStats(state.shiftControls).map(function(x){
+    return {"Ligne":x.ligne, "Contrôles":x.n, "Conformes":x.conf, "Non conformes":x.nonConf, "% conformité":pct(x.conf, x.n), "% non conformité":pct(x.nonConf, x.n)};
+  })), "Par ligne");
+  if(state.stoppedLines && state.stoppedLines.length){
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.stoppedLines.map(function(x){
+      return {"Ligne":x.ligne, "Cause de l'arrêt":x.cause, "Période":x.periode||""};
+    })), "Lignes en arrêt");
+  }
   return wb;
 }
 
@@ -5336,8 +5432,10 @@ document.addEventListener("DOMContentLoaded", async function(){
       var resetShift = function(){
         state.shiftControls = [];
         state.synthPhotos = [];
+        state.stoppedLines = [];
         renderHistory();
         renderSynthPhotos();
+        renderStoppedLines();
         updateBadges();
         toast("Nouveau quart démarré. Historique de tendance mis à jour.");
       };
@@ -5348,6 +5446,8 @@ document.addEventListener("DOMContentLoaded", async function(){
   });
 
   $("#btnBuildSynth").addEventListener("click", renderSynthPreview);
+  $("#btnAddStop").addEventListener("click", addStoppedLine);
+  renderStoppedLines();
 
   // Module 1 — Synthèse produits et lots du quart
   $("#btnBuildExtract1").addEventListener("click", renderExtract1Preview);
