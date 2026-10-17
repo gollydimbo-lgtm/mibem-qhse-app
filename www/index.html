@@ -545,7 +545,7 @@ main{
 .report-doc .reval{border-left:4px solid var(--dark2);background:#f7f2f4;padding:7px 9px;border-radius:0 6px 6px 0;font-size:.76rem;margin-bottom:4px;}
 .report-doc .reval.nc{border-left-color:var(--nc);background:#fdf3f2;} .report-doc .reval.warn{border-left-color:var(--warn);background:#fdf7e9;} .report-doc .reval.ok{border-left-color:var(--ok);background:#f1f8f4;}
 .report-doc .rconcl{font-size:.76rem;line-height:1.45;margin-bottom:6px;}
-.report-doc .rsign{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;break-inside:avoid;}
+.report-doc .rsign{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px;break-inside:avoid;}
 .report-doc .rsign .sg{border:1px solid #cfc9b8;border-radius:6px;padding:5px 7px;min-height:62px;font-size:.66rem;color:#555;}
 .report-doc .rsign .sg b{display:block;color:var(--dark2);font-size:.7rem;margin-bottom:2px;}
 .report-doc .rsign .sg i{display:block;margin-top:20px;border-top:1px solid #bbb;padding-top:2px;font-style:normal;color:#999;}
@@ -3324,7 +3324,6 @@ function buildSingleReportHtml(ctrl){
   var conclHtml = '<div class="rkeep"><h3 class="rsection">✅ Conclusion et validation</h3><div class="rconcl">'+concl+'</div>'+
     '<div class="rsign">'+
       '<div class="sg"><b>Contrôleur</b>'+escapeHtml(ctrl.controleur||"")+'<i>Date / Signature</i></div>'+
-      '<div class="sg"><b>Responsable qualité</b>&nbsp;<i>Nom, date / Signature</i></div>'+
       '<div class="sg"><b>Décision sur le lot</b>&nbsp;<i>Nom, date / Signature</i></div>'+
     '</div>'+
     '<div class="rnote">Ce rapport consigne les résultats du contrôle. Il ne vaut pas décision de libération du lot.</div></div>';
