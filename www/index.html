@@ -513,6 +513,29 @@ main{
   margin-top:14px;padding-top:10px;border-top:2px solid #eee;
   break-inside:avoid;page-break-inside:avoid;
 }
+/* Export compact : marges et tableaux resserrés pour tenir sur le moins de pages possible. */
+.export-compact .report-doc{padding:10px 16px!important;}
+.export-compact .report-doc table th,.export-compact .report-doc table td{padding:4px 6px;line-height:1.3;}
+.export-compact .report-doc table th{padding:5px 5px;}
+.export-compact .report-doc h3.rsection{margin:7px 0 4px;padding:3px 8px;}
+.export-compact .report-doc .rmeta-grid{padding:6px 9px;gap:10px;}
+.export-compact .report-doc .rsummary{margin-bottom:4px;}
+.export-compact .report-doc .rsummary .rs{padding:3px 4px;}
+.export-compact .report-doc .reval{padding:4px 8px;}
+.export-compact .report-doc .rconcl{margin-bottom:3px;}
+.export-compact .report-doc .rsign .sg{min-height:44px;padding:3px 6px;}
+.export-compact .report-doc .rsign .sg i{margin-top:10px;}
+.export-compact .report-doc .rnc{padding:4px 8px;margin-bottom:4px;}
+.export-compact .report-doc .rfooter-block{margin-top:6px;padding-top:4px;}
+.export-tight .report-doc table{font-size:.68rem;}
+.export-tight .report-doc table th,.export-tight .report-doc table td{padding:2px 5px;line-height:1.22;}
+.export-tight .report-doc .rmeta-grid{padding:4px 8px;font-size:.7rem;}
+.export-tight .report-doc .rheader{margin-bottom:4px;}
+.export-tight .report-doc .rnc,.export-tight .report-doc .rconcl,.export-tight .report-doc .reval{font-size:.68rem;line-height:1.3;}
+.export-tight .report-doc .rsummary .rs b{font-size:.9rem;}
+.export-tight .report-doc .rsign .sg{min-height:34px;} .export-tight .report-doc .rsign .sg i{margin-top:6px;}
+.export-tight .report-doc .rnote{margin-top:2px;}
+.export-compact .report-doc .rfoot{margin-top:4px;padding-top:4px;}
 .report-doc .rref{font-size:.68rem;font-weight:700;color:var(--gold-dark);letter-spacing:.03em;margin-top:2px;}
 .report-doc .rsummary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px;}
 .report-doc .rsummary .rs{border:1px solid #e2ddd0;border-radius:6px;padding:6px 4px;text-align:center;background:#faf9f4;}
@@ -4115,6 +4138,18 @@ function saveDocumentToNativeStorage(base64Data, fileName){
    lettre par lettre). 780px correspond à une largeur de page A4 utilisable à 96dpi. */
 var EXPORT_WIDTH_PX = 780;
 
+/* Variantes de mise en page d'export, de la plus aérée à la plus compacte. Les photos
+   restent GRANDES dans toutes les variantes (2 par ligne, 195 px de haut minimum) : on
+   gagne de la place d'abord sur les marges et les tableaux, puis un peu sur la hauteur
+   des cases photo, pour réduire le nombre de pages (une seule si possible). */
+var EXPORT_VARIANTS = [
+  {h2:260, h3:200, hl:380, compact:false},
+  {h2:240, h3:190, hl:340, compact:true},
+  {h2:220, h3:175, hl:310, compact:true},
+  {h2:200, h3:160, hl:280, compact:true},
+  {h2:200, h3:160, hl:280, compact:true, tight:true}
+];
+
 /* Clone le contenu du rapport dans un conteneur hors-écran à largeur fixe A4, pour que
    la capture (html2canvas) ne dépende jamais de la largeur du viewport mobile. */
 function cloneForExport(node){
@@ -4126,185 +4161,187 @@ function cloneForExport(node){
   wrapper.style.top = "0";
   wrapper.style.width = EXPORT_WIDTH_PX + "px";
   wrapper.style.background = "#ffffff";
+  wrapper.style.padding = "0";
+  wrapper.style.border = "0";
   wrapper.appendChild(contentRoot.cloneNode(true));
   document.body.appendChild(wrapper);
-  // Agrandir les photos UNIQUEMENT pour l'export (jamais dans l'app) : une case
-  // plus grande au moment de la capture donne directement bien plus de pixels
-  // réels dans le PDF/l'image finale, sans aucune manipulation fragile après coup.
-  // Galeries de preuves : 2 photos par ligne jusqu'à 6 photos, 3 par ligne au-delà
-  // (jamais 4) — chaque photo reste grande et lisible, et la coupe de page tombe
-  // toujours entre deux lignes. Les photos "grandes" (fiche du quart) sont inchangées.
-  Array.prototype.forEach.call(wrapper.querySelectorAll(".rgallery:not(.rgallery-large)"), function(g){
-    var cells = g.querySelectorAll(".rgallery-cell");
-    var perRow = cells.length > 6 ? 3 : 2;
-    var h = perRow === 2 ? 250 : 190;
-    g.style.gap = "10px";
-    Array.prototype.forEach.call(cells, function(c){
-      c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
-      var im = c.querySelector("img");
-      if(im){ im.style.height = h + "px"; im.style.minHeight = h + "px"; }
-    });
-  });
-  wrapper._ready = fitExportImages(wrapper);
+  wrapper._ready = prepareExportImages(wrapper);
   return wrapper;
 }
 
-/* Les photos sont dimensionnées en pixels EXACTS, avec leur vrai rapport largeur/hauteur,
-   centrées dans leur case : plus aucune déformation à l'export (la capture ne gère pas
-   toujours "object-fit"), et la photo est entière, sans recadrage. */
-function fitExportImages(wrapper){
-  var imgs = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img"));
-  // Une photo à la fois : décodage + réduction à la taille exacte de la case (x2 pour la
-  // capture) puis libération — évite de saturer la mémoire des téléphones modestes.
-  var chain = Promise.resolve();
-  imgs.forEach(function(img){
-    chain = chain.then(function(){
-    var ready = (img.decode ? img.decode().catch(function(){}) : Promise.resolve());
-    return ready.then(function(){
+/* Applique une variante : photos en pixels EXACTS, avec leur vrai rapport largeur/hauteur
+   et centrées dans leur case (aucune déformation, aucun recadrage ; "object-fit" n'est pas
+   fiable à la capture). 2 photos par ligne jusqu'à 6, 3 par ligne au-delà (jamais 4). */
+function applyExportLayout(wrapper, v){
+  wrapper.classList.toggle("export-compact", !!v.compact);
+  wrapper.classList.toggle("export-tight", !!v.tight);
+  var root = wrapper.firstChild;
+  Array.prototype.forEach.call(root.querySelectorAll(".rgallery"), function(g){
+    var large = g.classList.contains("rgallery-large");
+    var cells = g.querySelectorAll(".rgallery-cell");
+    var perRow = large ? 2 : (cells.length > 6 ? 3 : 2);
+    var boxH = large ? v.hl : (perRow === 2 ? v.h2 : v.h3);
+    g.style.gap = "10px";
+    Array.prototype.forEach.call(cells, function(c){
+      c.style.width = "calc(" + (100/perRow) + "% - " + (10*(perRow-1)/perRow) + "px)";
+      var img = c.querySelector("img"); if(!img) return;
       var nw = img.naturalWidth, nh = img.naturalHeight;
       if(!nw || !nh) return;
-      var cell = img.parentNode;
-      var boxW = cell.clientWidth - 2;
-      var boxH = parseFloat(img.style.height) || 250;
-      var k = Math.min(boxW/nw, boxH/nh);
+      var k = Math.min((c.clientWidth - 2)/nw, boxH/nh);
       var w = Math.floor(nw*k), h = Math.floor(nh*k);
-      img.style.objectFit = "fill";
-      img.style.width = w + "px";
-      img.style.height = h + "px";
-      img.style.minHeight = "0";
-      img.style.margin = "0 auto";
-      img.style.display = "block";
-      cell.style.paddingTop = Math.floor((boxH - h)/2) + "px";
-      cell.style.paddingBottom = Math.ceil((boxH - h)/2) + "px";
-      cell.style.background = "#f4f2ec";
-      // Version optimisée pour le PDF : réduction progressive (moitié par moitié) pour
-      // conserver les détails, JPEG qualité 92. L'original reste intact dans l'application.
-      var tw = w*2, th = h*2;
-      if(nw > tw*1.05){
-        try{
-          var cur = img, cw = nw, ch = nh;
-          while(cw/2 > tw){
-            var c1 = document.createElement("canvas"); c1.width = Math.round(cw/2); c1.height = Math.round(ch/2);
-            var x1 = c1.getContext("2d"); x1.imageSmoothingEnabled = true; x1.imageSmoothingQuality = "high";
-            x1.drawImage(cur, 0, 0, c1.width, c1.height); cur = c1; cw = c1.width; ch = c1.height;
-          }
-          var c2 = document.createElement("canvas"); c2.width = tw; c2.height = th;
-          var x2 = c2.getContext("2d"); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high";
-          x2.drawImage(cur, 0, 0, tw, th);
-          img.src = c2.toDataURL("image/jpeg", 0.92);
-          c2.width = c2.height = 0;
-          return img.decode ? img.decode().catch(function(){}) : null;
-        }catch(e){ /* repli : on garde l'image d'origine */ }
-      }
+      img.style.objectFit = "fill"; img.style.minHeight = "0";
+      img.style.width = w + "px"; img.style.height = h + "px";
+      img.style.margin = "0 auto"; img.style.display = "block";
+      c.style.paddingTop = Math.floor((boxH - h)/2) + "px";
+      c.style.paddingBottom = Math.ceil((boxH - h)/2) + "px";
+      c.style.background = "#f4f2ec";
     });
+  });
+}
+
+/* Décode les photos, applique la variante la plus grande, puis réduit chaque photo à sa
+   taille d'affichage x2 (réduction progressive, JPEG q92) : copie optimisée pour le PDF,
+   originaux intacts. Une photo à la fois pour ménager la mémoire des téléphones. */
+function prepareExportImages(wrapper){
+  var imgs = Array.prototype.slice.call(wrapper.querySelectorAll(".rgallery-cell img"));
+  var chain = Promise.resolve();
+  imgs.forEach(function(img){
+    chain = chain.then(function(){ return img.decode ? img.decode().catch(function(){}) : null; });
+  });
+  chain = chain.then(function(){ applyExportLayout(wrapper, EXPORT_VARIANTS[0]); });
+  imgs.forEach(function(img){
+    chain = chain.then(function(){
+      var nw = img.naturalWidth, nh = img.naturalHeight;
+      var w = parseFloat(img.style.width), h = parseFloat(img.style.height);
+      if(!nw || !nh || !w || !h) return;
+      var tw = Math.round(w*2), th = Math.round(h*2);
+      if(nw <= tw*1.05) return;
+      try{
+        var cur = img, cw = nw, ch = nh;
+        while(cw/2 > tw){
+          var c1 = document.createElement("canvas"); c1.width = Math.round(cw/2); c1.height = Math.round(ch/2);
+          var x1 = c1.getContext("2d"); x1.imageSmoothingEnabled = true; x1.imageSmoothingQuality = "high";
+          x1.drawImage(cur, 0, 0, c1.width, c1.height); cur = c1; cw = c1.width; ch = c1.height;
+        }
+        var c2 = document.createElement("canvas"); c2.width = tw; c2.height = th;
+        var x2 = c2.getContext("2d"); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high";
+        x2.drawImage(cur, 0, 0, tw, th);
+        img.src = c2.toDataURL("image/jpeg", 0.92);
+        c2.width = c2.height = 0;
+        return img.decode ? img.decode().catch(function(){}) : null;
+      }catch(e){ /* repli : on garde l'image d'origine */ }
     });
   });
   return chain;
 }
 
+/* Hauteur du rapport et positions où une coupure de page est autorisée (px CSS). */
+function measureExport(wrapper){
+  var top = wrapper.getBoundingClientRect().top;
+  var cuts = [];
+  Array.prototype.forEach.call(wrapper.firstChild.children, function(child){
+    // Un titre de section ne doit jamais devenir un point de coupure (il voyage avec son contenu).
+    if(child.tagName === "H3" && child.classList.contains("rsection")) return;
+    cuts.push(Math.round(child.getBoundingClientRect().bottom - top));
+  });
+  // Entre deux rangées de photos, jamais au milieu d'une image.
+  Array.prototype.forEach.call(wrapper.firstChild.querySelectorAll(".rgallery-cell"), function(cell){
+    cuts.push(Math.round(cell.getBoundingClientRect().bottom - top));
+  });
+  return {height: Math.round(wrapper.getBoundingClientRect().height), cuts: cuts};
+}
+
+function paginateExport(m, capPx){
+  var pages = [], cursor = 0;
+  while(cursor < m.height){
+    var limit = cursor + capPx;
+    if(limit >= m.height){ pages.push({from:cursor, to:m.height}); break; }
+    var cut = 0;
+    m.cuts.forEach(function(b){ if(b > cursor && b <= limit) cut = Math.max(cut, b); });
+    if(!cut) cut = Math.floor(limit);
+    pages.push({from:cursor, to:cut});
+    cursor = cut;
+  }
+  return pages;
+}
+
+/* Choisit la combinaison (variante, réduction) qui donne le MOINS de pages ; à nombre de
+   pages égal, celle qui sacrifie le moins la taille des photos et du texte. */
+function chooseExportLayout(wrapper, pageRatio, allowShrink){
+  var shrinks = allowShrink ? [1, 0.95, 0.9, 0.86, 0.82] : [1];
+  var best = null;
+  EXPORT_VARIANTS.forEach(function(v, vi){
+    applyExportLayout(wrapper, v);
+    var m = measureExport(wrapper);
+    shrinks.forEach(function(s){
+      var pages = paginateExport(m, EXPORT_WIDTH_PX * pageRatio / s);
+      var cost = vi*0.04 + (1 - s);
+      if(!best || pages.length < best.pages.length || (pages.length === best.pages.length && cost < best.cost)){
+        best = {v:v, s:s, pages:pages, cost:cost, m:m};
+      }
+    });
+  });
+  applyExportLayout(wrapper, best.v);
+  best.m = measureExport(wrapper);
+  best.pages = paginateExport(best.m, EXPORT_WIDTH_PX * pageRatio / best.s);
+  return best;
+}
+
 function buildPdfFromNode(node){
   var jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
   var pdf = new jsPDFCtor({unit:"pt", format:"a4"});
-  var pageW = pdf.internal.pageSize.getWidth();
-  var pageH = pdf.internal.pageSize.getHeight();
-  var margin = 20;
-  var maxW = pageW - margin*2;
-  var maxH = pageH - margin*2;
-  var SCALE = 2;
-
-  // Capture UNIQUE et continue de tout le rapport (photos incluses, agrandies par
-  // cloneForExport). Avant de lancer la capture, on mesure la position verticale de
-  // chaque bloc direct du rapport (en-tête, chaque tableau, chaque galerie de
-  // photos...) — ce sont les SEULES frontières où un saut de page est autorisé.
-  // Sans ça, une page pouvait couper une photo ou un tableau pile au milieu.
   var wrapper = cloneForExport(node);
-  return wrapper._ready.then(function(){ return buildPdfCore(wrapper, pdf, margin, maxW, SCALE); });
+  return wrapper._ready.then(function(){ return buildPdfCore(wrapper, pdf); });
 }
-function buildPdfCore(wrapper, pdf, margin, maxW, SCALE){
-  var pageH = pdf.internal.pageSize.getHeight();
-  var pageW0 = pdf.internal.pageSize.getWidth();
-  var refEl = wrapper.querySelector(".rref");
-  if(refEl) wrapper.setAttribute("data-ref", refEl.textContent.replace(/^Réf\.\s*/, "Réf. "));
-  var maxH = pageH - margin*2;
-  var reportClone = wrapper.firstChild;
-  var wrapperTop = wrapper.getBoundingClientRect().top;
-  var blockBoundaries = [];
-  Array.prototype.forEach.call(reportClone.children, function(child){
-    // Un titre de section (h3) ne doit jamais devenir un point de coupure : ça
-    // laisserait le titre seul en bas d'une page, séparé du tableau ou de la
-    // galerie qu'il annonce juste en dessous (c'est ce qui créait le grand vide
-    // sous "PHOTOS DE LA NON-CONFORMITÉ"). Sa frontière est donc ignorée — la
-    // coupure se reporte automatiquement sur l'élément précédent, et le titre
-    // voyage toujours avec son contenu vers la page suivante si besoin.
-    var isHeading = child.tagName === "H3" && child.classList.contains("rsection");
-    if(isHeading) return;
-    var r = child.getBoundingClientRect();
-    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
-  });
-  // Sécurité supplémentaire : si une galerie à elle seule dépasse une page entière
-  // (beaucoup de photos), on ajoute aussi la frontière basse de chaque vignette —
-  // ainsi, même dans ce cas rare, la coupure tombe toujours entre deux rangées de
-  // photos, jamais au milieu d'une image.
-  Array.prototype.forEach.call(reportClone.querySelectorAll(".rgallery-cell"), function(cell){
-    var r = cell.getBoundingClientRect();
-    blockBoundaries.push(Math.round((r.bottom - wrapperTop) * SCALE));
-  });
 
+function buildPdfCore(wrapper, pdf){
+  var SCALE = 2, margin = 20;
+  var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+  var maxW = pageW - margin*2, maxH = pageH - margin*2;
+  var refEl = wrapper.querySelector(".rref");
+  var refTxt = refEl ? refEl.textContent : "";
+  var plan = chooseExportLayout(wrapper, maxH/maxW, true);
   return html2canvas(wrapper, {scale:SCALE, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}).then(function(canvas){
     document.body.removeChild(wrapper);
-    var imgW = maxW;
+    var imgW = maxW * plan.s;
+    var xOff = margin + (maxW - imgW)/2;
     var ratio = canvas.width / imgW;
-    var pageCanvasHeight = maxH * ratio;
-
-    var pages = [];
-    var cursor = 0;
-    while(cursor < canvas.height){
-      var limit = cursor + pageCanvasHeight;
-      if(limit >= canvas.height){ pages.push({from:cursor, to:canvas.height}); break; }
-      // La plus grande frontière de bloc qui tient encore dans cette page.
-      var cut = 0;
-      blockBoundaries.forEach(function(b){ if(b > cursor && b <= limit) cut = Math.max(cut, b); });
-      if(!cut) cut = Math.floor(limit); // bloc plus grand qu'une page entière : dernier recours
-      pages.push({from:cursor, to:cut});
-      cursor = cut;
-    }
-
-    var totalPages = pages.length;
-    var refTxt = wrapper.getAttribute("data-ref") || "";
-    pages.forEach(function(p, i){
-      var sliceH = p.to - p.from;
-      if(sliceH <= 0) return;
-      var sliceCanvas = document.createElement("canvas");
-      sliceCanvas.width = canvas.width;
-      sliceCanvas.height = sliceH;
-      var ctx = sliceCanvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, sliceCanvas.width, sliceH);
-      ctx.drawImage(canvas, 0, p.from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      if(i>0) pdf.addPage();
-      pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.88), "JPEG", margin, margin, imgW, sliceH/ratio, undefined, "FAST");
-      sliceCanvas.width = sliceCanvas.height = 0;
+    var total = plan.pages.length;
+    plan.pages.forEach(function(p, i){
+      var from = Math.round(p.from*SCALE), to = Math.min(canvas.height, Math.round(p.to*SCALE));
+      var sliceH = to - from; if(sliceH <= 0) return;
+      var sc = document.createElement("canvas"); sc.width = canvas.width; sc.height = sliceH;
+      var ctx = sc.getContext("2d"); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, sc.width, sliceH);
+      ctx.drawImage(canvas, 0, from, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(i > 0) pdf.addPage();
+      pdf.addImage(sc.toDataURL("image/jpeg", 0.9), "JPEG", xOff, margin, imgW, sliceH/ratio, undefined, "FAST");
+      sc.width = sc.height = 0;
       pdf.setFontSize(7); pdf.setTextColor(120);
       pdf.text("MIBEM COMPANY — QHSE" + (refTxt ? "  ·  " + refTxt : ""), margin, pageH - 9);
-      pdf.text("Page " + (i+1) + " / " + totalPages, pageW0 - margin, pageH - 9, {align:"right"});
+      if(total > 1) pdf.text("Page " + (i+1) + " / " + total, pageW - margin, pageH - 9, {align:"right"});
     });
-
     var dataUri = pdf.output("datauristring");
-    var base64 = dataUri.substring(dataUri.indexOf(",")+1);
-    var blob = pdf.output("blob");
-    return { blob: blob, base64: base64, dataUri: dataUri };
+    return { blob: pdf.output("blob"), base64: dataUri.substring(dataUri.indexOf(",")+1), dataUri: dataUri, pages: total };
   }).catch(function(err){
     if(wrapper.parentNode) document.body.removeChild(wrapper);
     throw err;
   });
 }
 
+/* Image (PNG/JPEG) : même mise en page compacte, sans réduction du texte. */
+function captureNodeAsImage(node){
+  var wrapper = cloneForExport(node);
+  return wrapper._ready.then(function(){
+    chooseExportLayout(wrapper, 297/210, false);
+    return html2canvas(wrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0});
+  }).then(function(canvas){ document.body.removeChild(wrapper); return canvas; })
+  .catch(function(err){ if(wrapper.parentNode) document.body.removeChild(wrapper); throw err; });
+}
+
 function exportNode(node, kind, filename){
   toast("Génération en cours...");
   if(kind === "png"){
-    var exportWrapper = cloneForExport(node);
-    exportWrapper._ready.then(function(){ return html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}); }).then(function(canvas){
-      document.body.removeChild(exportWrapper);
+    captureNodeAsImage(node).then(function(canvas){
       var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       if(isNativeApp() && window.Capacitor.Plugins.Media){
         saveImageToNativeGallery(dataUrl, filename)
@@ -4319,7 +4356,6 @@ function exportNode(node, kind, filename){
       }
     }).catch(function(err){
       console.error(err);
-      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
       toast("Erreur lors de l'export.");
     });
   } else {
@@ -4390,9 +4426,7 @@ function shareNode(node, filename, text, kind){
   kind = kind || "pdf";
   if(kind === "png"){
     toast("Préparation de l'image...");
-    var exportWrapper = cloneForExport(node);
-    exportWrapper._ready.then(function(){ return html2canvas(exportWrapper, {scale:2, backgroundColor:"#ffffff", useCORS:true, imageTimeout:0}); }).then(function(canvas){
-      document.body.removeChild(exportWrapper);
+    captureNodeAsImage(node).then(function(canvas){
       canvas.toBlob(function(blob){
         blobToBase64(blob).then(function(base64){
           shareBlobOrDownload(base64, blob, filename+".jpg", "image/jpeg", text, "image");
@@ -4400,7 +4434,6 @@ function shareNode(node, filename, text, kind){
       }, "image/jpeg", 0.85);
     }).catch(function(err){
       console.error(err);
-      if(exportWrapper.parentNode) document.body.removeChild(exportWrapper);
       toast("Erreur lors de la préparation du partage.");
     });
     return;
