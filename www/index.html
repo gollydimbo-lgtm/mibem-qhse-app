@@ -939,6 +939,15 @@ main{
       <div class="photo-grid photo-grid-large" id="synthPhotoList"></div>
     </div>
     <div class="card" data-rap="synth">
+      <h2>🧤 SUIVI DE LA DISTRIBUTION DES EPI</h2>
+      <p class="hint" style="margin-top:-4px;">Saisissez les quantités distribuées pendant le quart. Seules les quantités renseignées apparaissent dans le rapport de fin de quart.</p>
+      <div id="epiGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px;"></div>
+      <div class="grid2">
+        <div class="field"><label>Autre EPI (nom)</label><input type="text" id="epi-autre-label" placeholder="ex : Lunettes"></div>
+        <div class="field"><label>Quantité</label><input type="number" inputmode="numeric" min="0" id="epi-autre" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="card" data-rap="synth">
       <h2>Synthèse de fin de quart</h2>
       <p class="hint" style="margin-top:-6px;">Regroupe automatiquement tous les contrôles et points d'alerte enregistrés depuis le début du quart.</p>
       <div class="field" style="margin-top:10px;">
@@ -1943,6 +1952,7 @@ var state = {
   ncData: {},            // détails NC courants {label: {...}}
   terrainPhotos: [],     // photos preuves terrain du contrôle en cours [{src, caption}]
   synthPhotos: [],       // photos de la fiche de rapport papier jointes à la synthèse du quart
+  epi: {},               // distribution des EPI du quart {gant, charlotte, ..., autreLabel, autre}
   stoppedLines: [],      // lignes à l'arrêt pendant le quart [{id, date, heure, quart, site, ligne, cause}]
   typeBouteille: "LOCALE", // valeur courante du champ Type de bouteille (LOCALE / IMPORT)
   editingId: null,       // si on édite un contrôle existant
@@ -1962,6 +1972,7 @@ function saveShiftToStorage(){
     shiftControls: state.shiftControls,
     synthPhotos: state.synthPhotos,
     stoppedLines: state.stoppedLines,
+    epi: state.epi,
     nextId: state.nextId
   };
   clearTimeout(_saveShiftTimer);
@@ -1984,6 +1995,7 @@ function loadShiftFromStorage(){
     state.shiftControls = (parsed && parsed.shiftControls) || [];
     state.synthPhotos = (parsed && parsed.synthPhotos) || [];
     state.stoppedLines = (parsed && parsed.stoppedLines) || [];
+    state.epi = (parsed && parsed.epi) || {};
     state.nextId = (parsed && parsed.nextId) || (state.shiftControls.length + 1);
   }
   function fallbackToLocalStorage(){
@@ -3465,6 +3477,38 @@ function addStoppedLine(){
   toast("Ligne en arrêt enregistrée à " + (state.stoppedLines[state.stoppedLines.length-1].heure) + ".");
 }
 
+var EPI_ITEMS = [
+  {k:"gant", label:"Gants"}, {k:"charlotte", label:"Charlottes"}, {k:"cacheNez", label:"Cache-nez"},
+  {k:"tablier", label:"Tabliers"}, {k:"sachet", label:"Sachets poubelle"}, {k:"chausson", label:"Chaussons"},
+  {k:"bouchon", label:"Bouchons d'oreille"}
+];
+function epiRows(){
+  var rows = [];
+  EPI_ITEMS.forEach(function(it){
+    var q = parseInt(state.epi[it.k], 10);
+    if(q > 0) rows.push({label:it.label, qty:q});
+  });
+  var qa = parseInt(state.epi.autre, 10);
+  if(qa > 0) rows.push({label:(state.epi.autreLabel || "").trim() || "Autre", qty:qa});
+  return rows;
+}
+function renderEpiForm(){
+  var grid = $("#epiGrid"); if(!grid) return;
+  if(!grid.children.length){
+    grid.innerHTML = EPI_ITEMS.map(function(it){
+      return '<div class="field"><label>'+escapeHtml(it.label)+'</label><input type="number" inputmode="numeric" min="0" placeholder="0" data-epi="'+it.k+'"></div>';
+    }).join("");
+    $all("[data-epi]", grid).forEach(function(inp){
+      inp.addEventListener("input", function(){ state.epi[inp.getAttribute("data-epi")] = inp.value; saveShiftToStorage(); refreshSynthIfShown(); });
+    });
+    $("#epi-autre").addEventListener("input", function(){ state.epi.autre = this.value; saveShiftToStorage(); refreshSynthIfShown(); });
+    $("#epi-autre-label").addEventListener("input", function(){ state.epi.autreLabel = this.value; saveShiftToStorage(); refreshSynthIfShown(); });
+  }
+  $all("[data-epi]", grid).forEach(function(inp){ inp.value = state.epi[inp.getAttribute("data-epi")] || ""; });
+  $("#epi-autre").value = state.epi.autre || "";
+  $("#epi-autre-label").value = state.epi.autreLabel || "";
+}
+
 function buildSynthesisHtml(){
   var controls = state.shiftControls;
   var visa = $("#synth-visa").value || "—";
@@ -3557,6 +3601,14 @@ function buildSynthesisHtml(){
     '<tr style="font-weight:700;"><td>Total quart</td><td class="rcell-center">'+controls.length+'</td>'+
     '<td class="rcell-center">'+totConf+'</td><td class="rcell-center">'+totNonConf+'</td>'+
     '<td class="rcell-center">'+pct(totConf, controls.length)+'</td><td class="rcell-center">'+pct(totNonConf, controls.length)+'</td></tr>';
+  var epiR = epiRows(), epiHtml = "";
+  if(epiR.length){
+    epiHtml = '<h3 class="rsection">🧤 Suivi de la distribution des EPI</h3>'+
+      '<table style="table-layout:fixed;"><colgroup><col style="width:70%;"><col style="width:30%;"></colgroup>'+
+      '<tr><th>EPI</th><th>Quantité distribuée</th></tr>'+
+      epiR.map(function(r){ return '<tr><td class="rwrap">'+escapeHtml(r.label)+'</td><td class="rcell-center"><b>'+r.qty+'</b></td></tr>'; }).join("")+
+      '</table>';
+  }
   var stops = (state.stoppedLines || []).slice().sort(function(x, y){ return String(x.heure).localeCompare(String(y.heure)); });
   var stopHtml = "";
   if(stops.length){
@@ -3657,6 +3709,7 @@ function buildSynthesisHtml(){
         tableRows+
       '</table>'+
       '<h3 class="rsection">🚨 Non-conformités du quart</h3>'+ncDetailHtml+
+      epiHtml+
       '<div class="rfooter-block">'+
         '<h3 class="rsection">⚠️ Points d\'alerte pour le quart suivant</h3>'+alertesHtml+
         synthPhotosHtml+
@@ -4109,7 +4162,7 @@ function renderAwarenessPreview(){
 
 function renderSynthPreview(){
   var host = $("#synthPreviewHost");
-  if(state.shiftControls.length === 0 && !(state.stoppedLines && state.stoppedLines.length)){
+  if(state.shiftControls.length === 0 && !(state.stoppedLines && state.stoppedLines.length) && !epiRows().length){
     host.innerHTML = '<div class="card"><div class="empty-state">Aucun contrôle enregistré pour ce quart. Enregistrez au moins un contrôle avant de générer la synthèse.</div></div>';
     return;
   }
@@ -4793,6 +4846,9 @@ function buildShiftExcelWorkbook(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(computeLineStats(state.shiftControls).map(function(x){
     return {"Ligne":x.ligne, "Contrôles":x.n, "Conformes":x.conf, "Non conformes":x.nonConf, "% conformité":pct(x.conf, x.n), "% non conformité":pct(x.nonConf, x.n)};
   })), "Par ligne");
+  if(epiRows().length){
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(epiRows().map(function(r){ return {"EPI":r.label, "Quantité distribuée":r.qty}; })), "Distribution EPI");
+  }
   if(state.stoppedLines && state.stoppedLines.length){
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.stoppedLines.map(function(x){
       return {"Date":x.date||"", "Heure":x.heure||"", "Quart":x.quart||"", "Site":x.site||"", "Ligne":x.ligne, "Cause de l'arrêt":x.cause};
@@ -5455,6 +5511,8 @@ document.addEventListener("DOMContentLoaded", async function(){
         state.shiftControls = [];
         state.synthPhotos = [];
         state.stoppedLines = [];
+        state.epi = {};
+        renderEpiForm();
         renderHistory();
         renderSynthPhotos();
         renderStoppedLines();
@@ -5469,6 +5527,7 @@ document.addEventListener("DOMContentLoaded", async function(){
 
   $("#btnBuildSynth").addEventListener("click", renderSynthPreview);
   $("#btnAddStop").addEventListener("click", addStoppedLine);
+  renderEpiForm();
   renderStoppedLines();
 
   // Module 1 — Synthèse produits et lots du quart
